@@ -1,0 +1,6 @@
+{
+  "name": "HI MUMMA",
+  "description": "A premium mobile-first maternal healthcare journey companion with 3D fetal development visualizer, digital records vault, twice-weekly BP logging, and daily wellness tracking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
