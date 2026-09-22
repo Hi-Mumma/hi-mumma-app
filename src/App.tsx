@@ -192,6 +192,7 @@ export default function App() {
       {currentTab === 'learn' && (
         <LearnView
           phase={phase}
+          currentUser={currentUser}
           communityPosts={communityPosts}
           onAddCommunityPost={addCommunityPost}
           expertQuestions={expertQuestions}

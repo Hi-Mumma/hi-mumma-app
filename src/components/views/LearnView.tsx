@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { governmentSchemesData } from '../../mock/maternalData';
-import { PregnancyPhase, CommunityPost, ExpertQuestion } from '../../types';
+import { PregnancyPhase, CommunityPost, ExpertQuestion, UserProfile } from '../../types';
+import { AiAssistant } from '../ai/AiAssistant';
 
 interface LearnViewProps {
   phase: PregnancyPhase;
+  currentUser?: UserProfile | null;
   communityPosts?: CommunityPost[];
   onAddCommunityPost?: (category: CommunityPost['category'], title: string, content: string) => void;
   expertQuestions?: ExpertQuestion[];
@@ -12,6 +14,7 @@ interface LearnViewProps {
 
 export const LearnView: React.FC<LearnViewProps> = ({
   phase,
+  currentUser,
   communityPosts = [],
   onAddCommunityPost,
   expertQuestions = [],
@@ -53,6 +56,9 @@ export const LearnView: React.FC<LearnViewProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Hi Mumma Educational AI Assistant */}
+      <AiAssistant currentUser={currentUser} />
+
       {/* Category Tabs */}
       <div className="flex items-center gap-1.5 p-1 bg-white border border-[#E8EFF7] rounded-2xl shadow-xs overflow-x-auto no-scrollbar">
         {[
