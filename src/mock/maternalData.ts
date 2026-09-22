@@ -306,7 +306,7 @@ export const trimesterVisualConfigs: Record<number, TrimesterVisualExperience> =
   1: {
     id: 'first_trimester',
     trimesterNumber: 1,
-    weekRangeText: 'Weeks 0–12',
+    weekRangeText: 'Weeks 1–12',
     title: 'Embryonic Genesis & Foundational Anatomy',
     colorPalette: {
       primaryGlow: 'rgba(234, 129, 170, 0.28)',   // Soft maternal blush
@@ -354,7 +354,7 @@ export const trimesterVisualConfigs: Record<number, TrimesterVisualExperience> =
   2: {
     id: 'second_trimester',
     trimesterNumber: 2,
-    weekRangeText: 'Weeks 13–24',
+    weekRangeText: 'Weeks 13–27',
     title: 'Growth, Facial Sculpting & Sensory Genesis',
     colorPalette: {
       primaryGlow: 'rgba(234, 129, 170, 0.28)',
@@ -395,7 +395,7 @@ export const trimesterVisualConfigs: Record<number, TrimesterVisualExperience> =
   3: {
     id: 'third_trimester',
     trimesterNumber: 3,
-    weekRangeText: 'Weeks 25–40',
+    weekRangeText: 'Weeks 28–40+',
     title: 'Maturation, Neural Density & Birth Readiness',
     colorPalette: {
       primaryGlow: 'rgba(234, 129, 170, 0.30)',

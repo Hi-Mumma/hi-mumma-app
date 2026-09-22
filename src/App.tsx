@@ -17,6 +17,7 @@ import { RecordsView } from './components/records/RecordsView';
 import { AuthFlow } from './components/auth/AuthFlow';
 import { GuardianDashboardView } from './components/views/GuardianDashboardView';
 import { BrandLogo } from './components/common/BrandLogo';
+import { getTrimesterNumber } from './utils/pregnancyStage';
 
 export default function App() {
   const {
@@ -59,11 +60,7 @@ export default function App() {
     isAuthLoading
   } = useMaternalStore();
 
-  const getTrimesterNumber = (w: number): 1 | 2 | 3 => {
-    if (w <= 12) return 1;
-    if (w <= 24) return 2;
-    return 3;
-  };
+
 
   // ── 0. AUTH SESSION RESTORATION LOADING ──
   if (isAuthLoading) {

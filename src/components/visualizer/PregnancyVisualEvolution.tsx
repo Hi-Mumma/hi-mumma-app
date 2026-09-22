@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { trimesterVisualConfigs } from '../../mock/maternalData';
 import { CinematicCanvasParticles } from './CinematicCanvasParticles';
 import { StageVideoContainer } from './StageVideoContainer';
+import { getTrimesterNumber } from '../../utils/pregnancyStage';
 
 interface PregnancyVisualEvolutionProps {
   currentWeek: number;
@@ -12,12 +13,6 @@ export const PregnancyVisualEvolution: React.FC<PregnancyVisualEvolutionProps> =
   currentWeek,
   onSelectWeek
 }) => {
-  const getTrimesterNumber = (w: number): 1 | 2 | 3 => {
-    if (w <= 12) return 1;
-    if (w <= 24) return 2;
-    return 3;
-  };
-
   const trimesterNum = getTrimesterNumber(currentWeek);
   const activeExperience = trimesterVisualConfigs[trimesterNum];
 

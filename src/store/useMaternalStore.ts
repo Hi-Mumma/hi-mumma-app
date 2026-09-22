@@ -25,6 +25,7 @@ import {
 } from '../mock/maternalData';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
 import { getFullUserProfile } from '../lib/supabaseServices';
+import { calculateGestationalWeekFromDueDate } from '../utils/pregnancyStage';
 
 export const useMaternalStore = () => {
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
@@ -35,6 +36,15 @@ export const useMaternalStore = () => {
   // Authenticated User State & Loading Indicator
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+
+  // Derive gestational week dynamically when user profile / due date changes
+  useEffect(() => {
+    const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
+    if (dueDateStr) {
+      const derivedWeek = calculateGestationalWeekFromDueDate(dueDateStr);
+      setCurrentWeek(derivedWeek);
+    }
+  }, [currentUser]);
 
   // Supabase Auth Session Listener & Initialization
   useEffect(() => {

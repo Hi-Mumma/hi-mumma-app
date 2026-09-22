@@ -119,7 +119,7 @@ export const MoreView: React.FC<MoreViewProps> = ({
                 : 'bg-[#FAFBFD] text-[#5A677D] border-[#E8EFF7] hover:border-[#6FAFED]'
             }`}
           >
-            🤰 Pregnancy (Weeks 0–40)
+            🤰 Pregnancy (Weeks 1–40+)
           </button>
           <button
             onClick={() => onTogglePhase('postpartum')}

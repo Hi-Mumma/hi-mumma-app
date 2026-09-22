@@ -24,9 +24,9 @@ export const RecordsView: React.FC<RecordsViewProps> = ({
   const [uploadType, setUploadType] = useState<'pdf' | 'camera' | 'gallery'>('pdf');
 
   const folders: { id: RecordFolderType; label: string; range: string; icon: string; phaseTag: string }[] = [
-    { id: 'first_trimester', label: 'First Trimester', range: 'Weeks 0–12', icon: '📁', phaseTag: 'Antenatal Phase 1' },
-    { id: 'second_trimester', label: 'Second Trimester', range: 'Weeks 13–26', icon: '📁', phaseTag: 'Antenatal Phase 2' },
-    { id: 'third_trimester', label: 'Third Trimester', range: 'Weeks 27–40', icon: '📁', phaseTag: 'Antenatal Phase 3' },
+    { id: 'first_trimester', label: 'First Trimester', range: 'Weeks 1–12', icon: '📁', phaseTag: 'Antenatal Phase 1' },
+    { id: 'second_trimester', label: 'Second Trimester', range: 'Weeks 13–27', icon: '📁', phaseTag: 'Antenatal Phase 2' },
+    { id: 'third_trimester', label: 'Third Trimester', range: 'Weeks 28–40+', icon: '📁', phaseTag: 'Antenatal Phase 3' },
     {
       id: 'postpartum',
       label: 'Postpartum Vault',

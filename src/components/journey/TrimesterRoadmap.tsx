@@ -29,7 +29,7 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
 }) => {
   const [expandedStage, setExpandedStage] = useState<string>(() => {
     if (currentWeek <= 12) return 't1';
-    if (currentWeek <= 26) return 't2';
+    if (currentWeek <= 27) return 't2';
     if (currentWeek <= 40) return 't3';
     return 'delivery';
   });
@@ -72,9 +72,9 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
     {
       id: 't2',
       phaseName: 'Second Trimester',
-      weekRange: 'Weeks 13–26',
+      weekRange: 'Weeks 13–27',
       subtitle: 'Growing Stronger & First Flutter Kicks',
-      status: currentWeek > 26 ? 'completed' : currentWeek >= 13 ? 'current' : 'upcoming',
+      status: currentWeek > 27 ? 'completed' : currentWeek >= 13 ? 'current' : 'upcoming',
       accentColor: '#38BDF8',
       bgGradient: 'from-[#F0F9FF] via-white to-[#E0F2FE]/40',
       borderColor: 'border-[#93C5FD]',
@@ -89,9 +89,9 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
     {
       id: 't3',
       phaseName: 'Third Trimester',
-      weekRange: 'Weeks 27–40',
+      weekRange: 'Weeks 28–40+',
       subtitle: 'Maturation, Brainwaves & Final Arrival Prep',
-      status: currentWeek > 40 ? 'completed' : currentWeek >= 27 ? 'current' : 'upcoming',
+      status: currentWeek > 40 ? 'completed' : currentWeek >= 28 ? 'current' : 'upcoming',
       accentColor: '#818CF8',
       bgGradient: 'from-[#F5F3FF] via-white to-[#EDE9FE]/40',
       borderColor: 'border-[#C4B5FD]',

@@ -201,8 +201,8 @@ export const TestsAndUltrasoundSection: React.FC<TestsAndUltrasoundSectionProps>
         {[
           { id: 'all', label: 'All Trimesters' },
           { id: '1', label: 'Trimester 1 (Weeks 1–12)' },
-          { id: '2', label: 'Trimester 2 (Weeks 13–26)' },
-          { id: '3', label: 'Trimester 3 (Weeks 27–40)' }
+          { id: '2', label: 'Trimester 2 (Weeks 13–27)' },
+          { id: '3', label: 'Trimester 3 (Weeks 28–40+)' }
         ].map((chip) => (
           <button
             key={chip.id}
