@@ -493,13 +493,13 @@ export const useMaternalStore = () => {
         guardianName: email.split('@')[0],
         guardianEmail: email.trim(),
         permissions: {
-          allowVitalsView: true,
-          allowJourneyView: true,
-          allowCareView: true,
-          allowRemindersView: true,
-          allowDeliveryPrepView: true,
-          allowPostpartumView: true,
-          allowSharedTasksView: true
+          allowVitalsView: false,
+          allowJourneyView: false,
+          allowCareView: false,
+          allowRemindersView: false,
+          allowDeliveryPrepView: false,
+          allowPostpartumView: false,
+          allowSharedTasksView: false
         }
       };
       setCaregiverLinks((prev) => [localLink, ...prev]);

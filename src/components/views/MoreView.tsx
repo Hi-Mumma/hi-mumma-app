@@ -140,7 +140,7 @@ export const MoreView: React.FC<MoreViewProps> = ({
               🛡️ Privacy & Medical Control Notice:
             </p>
             <p className="text-[#5A677D] leading-relaxed">
-              Caregivers only see areas explicitly enabled below. <strong>Fetal Movement (kick counts)</strong> and <strong>Private Medical Vault</strong> records remain strictly private (Mother Only).
+              Caregivers only see areas explicitly enabled below. <strong>Fetal Movement (kick counts)</strong>, <strong>Clinical Vitals (BP/Sugar)</strong>, and <strong>Private Medical Vault</strong> records remain strictly private (Mother Only).
             </p>
           </div>
 
@@ -186,12 +186,12 @@ export const MoreView: React.FC<MoreViewProps> = ({
 
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       {[
-                        { key: 'allowJourneyView', label: '🗺️ Trimester Journey' },
-                        { key: 'allowCareView', label: '🥗 Care & Supplements' },
-                        { key: 'allowRemindersView', label: '⏰ Reminders & Visits' },
+                        { key: 'allowJourneyView', label: '🗺️ Gestational Progress' },
+                        { key: 'allowCareView', label: '🥗 Supplement Summary' },
                         { key: 'allowDeliveryPrepView', label: '🎒 Delivery Bag Prep' },
                         { key: 'allowSharedTasksView', label: '🤝 Shared Tasks' },
-                        { key: 'allowPostpartumView', label: '🌸 Postpartum Recovery' }
+                        { key: 'allowRemindersView', label: '⏰ Reminders (UI Preference)' },
+                        { key: 'allowPostpartumView', label: '🌸 Postpartum (UI Preference)' }
                       ].map((perm) => (
                         <label
                           key={perm.key}

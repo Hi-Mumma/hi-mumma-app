@@ -171,9 +171,10 @@ CREATE POLICY "Users can read links where they are guardian or patient"
   USING (auth.uid() = guardian_id OR auth.uid() = patient_id);
 
 DROP POLICY IF EXISTS "Guardians or patients can insert relationship link" ON public.guardian_patient_links;
-CREATE POLICY "Guardians or patients can insert relationship link"
+DROP POLICY IF EXISTS "Mothers can insert caregiver relationship link" ON public.guardian_patient_links;
+CREATE POLICY "Mothers can insert caregiver relationship link"
   ON public.guardian_patient_links FOR INSERT
-  WITH CHECK (auth.uid() = guardian_id OR auth.uid() = patient_id);
+  WITH CHECK (auth.uid() = patient_id);
 
 DROP POLICY IF EXISTS "Mothers control caregiver permissions" ON public.guardian_patient_links;
 CREATE POLICY "Mothers control caregiver permissions"
@@ -271,6 +272,36 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
+-- ====================================================================
+-- SECURE CAREGIVER EMAIL RESOLUTION FUNCTION
+-- Returns ONLY the matching user's UUID for an existing guardian account.
+-- ====================================================================
+
+CREATE OR REPLACE FUNCTION public.resolve_caregiver_id_by_email(email_input TEXT)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  found_id UUID;
+BEGIN
+  IF email_input IS NULL OR TRIM(email_input) = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT id INTO found_id
+  FROM public.profiles
+  WHERE LOWER(email) = LOWER(TRIM(email_input))
+    AND role = 'guardian'
+  LIMIT 1;
+
+  RETURN found_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.resolve_caregiver_id_by_email(TEXT) TO authenticated;
 
 -- ====================================================================
 -- HI MUMMA - PHASE 3 CARE DATABASE TABLES & RLS SECURITY POLICIES
@@ -385,7 +416,7 @@ CREATE POLICY "Permitted guardians can view supplement logs"
       WHERE gpl.guardian_id = auth.uid()
         AND gpl.patient_id = daily_supplement_logs.patient_id
         AND gpl.status = 'active'
-        AND (gpl.allow_care_view = TRUE OR gpl.allow_vitals_view = TRUE)
+        AND gpl.allow_care_view = TRUE
     )
   );
 

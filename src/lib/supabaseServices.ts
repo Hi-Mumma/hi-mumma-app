@@ -406,66 +406,81 @@ export async function createCaregiverLinkByEmail(
   caregiverEmail: string,
   relationship: string
 ): Promise<DatabaseGuardianPatientLink | null> {
-  const { data: guardianUser } = await supabase
+  const cleanEmail = caregiverEmail.trim().toLowerCase();
+
+  // Call SECURITY DEFINER RPC to resolve guardian user ID safely without exposing profiles
+  const { data: resolvedGuardianId, error: rpcError } = await supabase.rpc(
+    'resolve_caregiver_id_by_email',
+    { email_input: cleanEmail }
+  );
+
+  if (rpcError) {
+    console.error('Error resolving caregiver email via RPC:', rpcError.message);
+  }
+
+  const guardianId = resolvedGuardianId as string | null;
+
+  if (!guardianId) {
+    console.warn(`No active guardian profile found matching email: ${cleanEmail}`);
+    return null;
+  }
+
+  // Insert caregiver link with least-privilege defaults (ALL PERMISSIONS FALSE)
+  const { data: newLink, error: linkError } = await supabase
+    .from('guardian_patient_links')
+    .upsert(
+      {
+        patient_id: patientId,
+        guardian_id: guardianId,
+        status: 'active',
+        allow_vitals_view: false,
+        allow_journey_view: false,
+        allow_care_view: false,
+        allow_reminders_view: false,
+        allow_delivery_prep_view: false,
+        allow_postpartum_view: false,
+        allow_shared_tasks_view: false
+      },
+      { onConflict: 'guardian_id,patient_id' }
+    )
+    .select('*')
+    .single();
+
+  if (linkError) {
+    console.error('Error creating guardian link:', linkError.message);
+    return null;
+  }
+
+  // Fetch basic guardian profile name if now linked
+  const { data: guardianProf } = await supabase
     .from('profiles')
-    .select('id, name, email')
-    .eq('email', caregiverEmail.trim().toLowerCase())
+    .select('name')
+    .eq('id', guardianId)
     .maybeSingle();
 
-  const guardianId = guardianUser?.id;
-
   await addSupportPerson(patientId, {
-    name: guardianUser?.name || caregiverEmail.split('@')[0],
+    name: guardianProf?.name || cleanEmail.split('@')[0],
     relationship: relationship as any,
     phone: ''
   });
 
-  if (guardianId) {
-    const { data: newLink, error: linkError } = await supabase
-      .from('guardian_patient_links')
-      .upsert(
-        {
-          patient_id: patientId,
-          guardian_id: guardianId,
-          status: 'active',
-          allow_vitals_view: true,
-          allow_journey_view: true,
-          allow_care_view: true,
-          allow_reminders_view: true,
-          allow_delivery_prep_view: true,
-          allow_postpartum_view: true,
-          allow_shared_tasks_view: true
-        },
-        { onConflict: 'guardian_id,patient_id' }
-      )
-      .select('*')
-      .single();
-
-    if (linkError) {
-      console.error('Error creating guardian link:', linkError.message);
-      return null;
-    }
-
-    return {
-      id: newLink.id,
-      guardianId: newLink.guardian_id,
-      patientId: newLink.patient_id,
-      status: newLink.status as any,
-      permissions: {
-        allowVitalsView: newLink.allow_vitals_view,
-        allowJourneyView: newLink.allow_journey_view,
-        allowCareView: newLink.allow_care_view,
-        allowRemindersView: newLink.allow_reminders_view,
-        allowDeliveryPrepView: newLink.allow_delivery_prep_view,
-        allowPostpartumView: newLink.allow_postpartum_view,
-        allowSharedTasksView: newLink.allow_shared_tasks_view
-      },
-      guardianName: guardianUser?.name || 'Caregiver',
-      guardianEmail: caregiverEmail
-    };
-  }
-
-  return null;
+  return {
+    id: newLink.id,
+    guardianId: newLink.guardian_id,
+    patientId: newLink.patient_id,
+    status: newLink.status as any,
+    permissions: {
+      allowVitalsView: newLink.allow_vitals_view ?? false,
+      allowJourneyView: newLink.allow_journey_view ?? false,
+      allowCareView: newLink.allow_care_view ?? false,
+      allowRemindersView: newLink.allow_reminders_view ?? false,
+      allowDeliveryPrepView: newLink.allow_delivery_prep_view ?? false,
+      allowPostpartumView: newLink.allow_postpartum_view ?? false,
+      allowSharedTasksView: newLink.allow_shared_tasks_view ?? false
+    },
+    guardianName: guardianProf?.name || cleanEmail.split('@')[0],
+    guardianEmail: cleanEmail
+  };
 }
 
 /**
@@ -521,7 +536,7 @@ export async function fetchGuardianLinkedPatientData(
   }
 
   let supplementsTaken: { taken: number; total: number } | undefined = undefined;
-  if (permissions.allowCareView || permissions.allowVitalsView) {
+  if (permissions.allowCareView) {
     const today = new Date().toISOString().split('T')[0];
     const { data: suppData } = await supabase
       .from('daily_supplement_logs')
