@@ -59,6 +59,16 @@ CREATE TABLE IF NOT EXISTS public.guardian_patient_links (
   CONSTRAINT unique_guardian_patient_pair UNIQUE (guardian_id, patient_id)
 );
 
+-- Idempotent column addition for existing live database tables
+ALTER TABLE public.guardian_patient_links
+  ADD COLUMN IF NOT EXISTS allow_vitals_view BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS allow_journey_view BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS allow_care_view BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS allow_reminders_view BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS allow_delivery_prep_view BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS allow_postpartum_view BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS allow_shared_tasks_view BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- ====================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ====================================================================
@@ -285,12 +295,31 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  caller_id UUID;
+  caller_role TEXT;
   found_id UUID;
 BEGIN
+  -- 1. Ensure caller is authenticated
+  caller_id := auth.uid();
+  IF caller_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- 2. Restrict execution strictly to patient/mother profiles
+  SELECT role INTO caller_role
+  FROM public.profiles
+  WHERE id = caller_id;
+
+  IF caller_role IS NULL OR caller_role <> 'patient' THEN
+    RETURN NULL;
+  END IF;
+
+  -- 3. Validate input
   IF email_input IS NULL OR TRIM(email_input) = '' THEN
     RETURN NULL;
   END IF;
 
+  -- 4. Safe resolution matching guardian role only
   SELECT id INTO found_id
   FROM public.profiles
   WHERE LOWER(email) = LOWER(TRIM(email_input))
@@ -301,6 +330,8 @@ BEGIN
 END;
 $$;
 
+-- Secure execution privileges
+REVOKE EXECUTE ON FUNCTION public.resolve_caregiver_id_by_email(TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.resolve_caregiver_id_by_email(TEXT) TO authenticated;
 
 -- ====================================================================
