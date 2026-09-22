@@ -3,7 +3,14 @@ import {
   UserProfile,
   PatientProfile,
   GuardianProfile,
-  SupportPerson
+  SupportPerson,
+  DailySupplements,
+  PregnancyTestTrackingEntry,
+  UltrasoundMilestoneTrackingEntry,
+  FetalMovementEntry,
+  MedicalRecordItem,
+  RecordFolderType,
+  MedicalTrackingStatus
 } from '../types';
 
 export interface DatabaseProfile {
@@ -392,3 +399,294 @@ export async function getFullUserProfile(userId: string, authEmail?: string): Pr
     guardianProfile: guardianProfileObj
   };
 }
+
+/* ====================================================================
+   PHASE 3: CARE SERVICES (TESTS, ULTRASOUNDS, SUPPLEMENTS, KICKS, RECORDS)
+   ==================================================================== */
+
+/**
+ * Fetch pregnancy test tracking records for a patient
+ */
+export async function fetchPregnancyTestRecords(patientId: string): Promise<PregnancyTestTrackingEntry[]> {
+  const { data, error } = await supabase
+    .from('pregnancy_test_records')
+    .select('*')
+    .eq('patient_id', patientId);
+
+  if (error) {
+    console.error('Error fetching pregnancy test records:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.test_id,
+    name: row.test_name,
+    status: row.status as MedicalTrackingStatus
+  }));
+}
+
+/**
+ * Upsert a pregnancy test tracking status
+ */
+export async function upsertPregnancyTestRecord(
+  patientId: string,
+  testId: string,
+  testName: string,
+  status: MedicalTrackingStatus
+) {
+  const { error } = await supabase
+    .from('pregnancy_test_records')
+    .upsert(
+      {
+        patient_id: patientId,
+        test_id: testId,
+        test_name: testName,
+        status,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'patient_id,test_id' }
+    );
+
+  if (error) {
+    console.error('Error upserting pregnancy test record:', error.message);
+  }
+}
+
+/**
+ * Fetch ultrasound milestone tracking records for a patient
+ */
+export async function fetchUltrasoundMilestonesRecords(patientId: string): Promise<UltrasoundMilestoneTrackingEntry[]> {
+  const { data, error } = await supabase
+    .from('ultrasound_milestones_records')
+    .select('*')
+    .eq('patient_id', patientId);
+
+  if (error) {
+    console.error('Error fetching ultrasound milestone records:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.milestone_id,
+    title: row.title,
+    timing: row.timing || '',
+    description: row.description || undefined,
+    status: row.status as MedicalTrackingStatus
+  }));
+}
+
+/**
+ * Upsert an ultrasound milestone status
+ */
+export async function upsertUltrasoundMilestoneRecord(
+  patientId: string,
+  milestoneId: string,
+  title: string,
+  status: MedicalTrackingStatus,
+  timing?: string,
+  description?: string
+) {
+  const { error } = await supabase
+    .from('ultrasound_milestones_records')
+    .upsert(
+      {
+        patient_id: patientId,
+        milestone_id: milestoneId,
+        title,
+        status,
+        timing: timing || null,
+        description: description || null,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'patient_id,milestone_id' }
+    );
+
+  if (error) {
+    console.error('Error upserting ultrasound milestone record:', error.message);
+  }
+}
+
+/**
+ * Fetch daily supplement log for a given date
+ */
+export async function fetchDailySupplementLog(patientId: string, dateStr?: string): Promise<DailySupplements | null> {
+  const today = dateStr || new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('daily_supplement_logs')
+    .select('*')
+    .eq('patient_id', patientId)
+    .eq('log_date', today)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching daily supplement log:', error.message);
+    return null;
+  }
+
+  if (!data) return null;
+
+  return {
+    iron: data.iron,
+    folicAcid: data.folic_acid,
+    calcium: data.calcium
+  };
+}
+
+/**
+ * Upsert daily supplement log for a given date
+ */
+export async function upsertDailySupplementLog(
+  patientId: string,
+  supplements: DailySupplements,
+  dateStr?: string
+) {
+  const today = dateStr || new Date().toISOString().split('T')[0];
+  const { error } = await supabase
+    .from('daily_supplement_logs')
+    .upsert(
+      {
+        patient_id: patientId,
+        log_date: today,
+        iron: supplements.iron,
+        folic_acid: supplements.folicAcid,
+        calcium: supplements.calcium,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'patient_id,log_date' }
+    );
+
+  if (error) {
+    console.error('Error upserting daily supplement log:', error.message);
+  }
+}
+
+/**
+ * Fetch fetal movement counter logs for a patient
+ */
+export async function fetchFetalMovementLogs(patientId: string): Promise<FetalMovementEntry[]> {
+  const { data, error } = await supabase
+    .from('fetal_movement_logs')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching fetal movement logs:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    count: row.count,
+    durationMinutes: row.duration_minutes,
+    timeLabel: row.time_label,
+    timestamp: row.timestamp_str,
+    notes: row.notes || undefined
+  }));
+}
+
+/**
+ * Add a new fetal movement counter log
+ */
+export async function addFetalMovementLog(
+  patientId: string,
+  count: number,
+  durationMinutes: number,
+  timeLabel: string,
+  timestampStr: string,
+  notes?: string
+): Promise<FetalMovementEntry | null> {
+  const { data, error } = await supabase
+    .from('fetal_movement_logs')
+    .insert({
+      patient_id: patientId,
+      count,
+      duration_minutes: durationMinutes,
+      time_label: timeLabel,
+      timestamp_str: timestampStr,
+      notes: notes || null
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error inserting fetal movement log:', error.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    count: data.count,
+    durationMinutes: data.durationMinutes,
+    timeLabel: data.time_label,
+    timestamp: data.timestamp_str,
+    notes: data.notes || undefined
+  };
+}
+
+/**
+ * Fetch digital medical records for a patient
+ */
+export async function fetchMedicalRecords(patientId: string): Promise<MedicalRecordItem[]> {
+  const { data, error } = await supabase
+    .from('medical_records')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching medical records:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    folder: row.folder as RecordFolderType,
+    date: row.record_date || new Date(row.created_at).toLocaleDateString(),
+    fileType: row.file_type as 'pdf' | 'camera' | 'gallery',
+    fileSize: row.file_size,
+    previewUrl: row.preview_url || undefined
+  }));
+}
+
+/**
+ * Add a digital medical record for a patient
+ */
+export async function addMedicalRecord(
+  patientId: string,
+  name: string,
+  folder: RecordFolderType,
+  fileType: 'pdf' | 'camera' | 'gallery',
+  fileSize: string,
+  previewUrl?: string
+): Promise<MedicalRecordItem | null> {
+  const { data, error } = await supabase
+    .from('medical_records')
+    .insert({
+      patient_id: patientId,
+      name,
+      folder,
+      file_type: fileType,
+      file_size: fileSize,
+      preview_url: previewUrl || null
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error inserting medical record:', error.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    folder: data.folder as RecordFolderType,
+    date: data.record_date || 'Just now',
+    fileType: data.file_type as 'pdf' | 'camera' | 'gallery',
+    fileSize: data.file_size,
+    previewUrl: data.preview_url || undefined
+  };
+}
+

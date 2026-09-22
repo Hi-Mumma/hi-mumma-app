@@ -238,3 +238,122 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
+-- ====================================================================
+-- HI MUMMA - PHASE 3 CARE DATABASE TABLES & RLS SECURITY POLICIES
+-- ====================================================================
+
+-- 6. PREGNANCY TEST RECORDS TABLE
+CREATE TABLE IF NOT EXISTS public.pregnancy_test_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  test_id TEXT NOT NULL,
+  test_name TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('not_recorded', 'recorded')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_patient_pregnancy_test UNIQUE (patient_id, test_id)
+);
+
+-- 7. ULTRASOUND MILESTONES RECORDS TABLE
+CREATE TABLE IF NOT EXISTS public.ultrasound_milestones_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  milestone_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  timing TEXT,
+  description TEXT,
+  status TEXT NOT NULL CHECK (status IN ('not_recorded', 'recorded')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_patient_ultrasound_milestone UNIQUE (patient_id, milestone_id)
+);
+
+-- 8. DAILY SUPPLEMENT LOGS TABLE
+CREATE TABLE IF NOT EXISTS public.daily_supplement_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  log_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  iron BOOLEAN NOT NULL DEFAULT FALSE,
+  folic_acid BOOLEAN NOT NULL DEFAULT FALSE,
+  calcium BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_patient_supplement_date UNIQUE (patient_id, log_date)
+);
+
+-- 9. FETAL MOVEMENT LOGS TABLE
+CREATE TABLE IF NOT EXISTS public.fetal_movement_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  count INT NOT NULL,
+  duration_minutes INT NOT NULL,
+  time_label TEXT NOT NULL,
+  timestamp_str TEXT NOT NULL,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 10. MEDICAL RECORDS TABLE (DIGITAL VAULT)
+CREATE TABLE IF NOT EXISTS public.medical_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  folder TEXT NOT NULL CHECK (folder IN ('first_trimester', 'second_trimester', 'third_trimester', 'postpartum')),
+  file_type TEXT NOT NULL CHECK (file_type IN ('pdf', 'camera', 'gallery')),
+  file_size TEXT NOT NULL,
+  preview_url TEXT,
+  record_date DATE DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- INDEXES FOR PERFORMANCE
+CREATE INDEX IF NOT EXISTS idx_pregnancy_test_records_patient ON public.pregnancy_test_records(patient_id);
+CREATE INDEX IF NOT EXISTS idx_ultrasound_milestones_records_patient ON public.ultrasound_milestones_records(patient_id);
+CREATE INDEX IF NOT EXISTS idx_daily_supplement_logs_patient ON public.daily_supplement_logs(patient_id);
+CREATE INDEX IF NOT EXISTS idx_fetal_movement_logs_patient ON public.fetal_movement_logs(patient_id);
+CREATE INDEX IF NOT EXISTS idx_medical_records_patient ON public.medical_records(patient_id);
+
+-- ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.pregnancy_test_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ultrasound_milestones_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.daily_supplement_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fetal_movement_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.medical_records ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR PREGNANCY TEST RECORDS
+DROP POLICY IF EXISTS "Patients manage own pregnancy tests" ON public.pregnancy_test_records;
+CREATE POLICY "Patients manage own pregnancy tests"
+  ON public.pregnancy_test_records FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+-- RLS POLICIES FOR ULTRASOUND MILESTONES RECORDS
+DROP POLICY IF EXISTS "Patients manage own ultrasound milestones" ON public.ultrasound_milestones_records;
+CREATE POLICY "Patients manage own ultrasound milestones"
+  ON public.ultrasound_milestones_records FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+-- RLS POLICIES FOR DAILY SUPPLEMENT LOGS
+DROP POLICY IF EXISTS "Patients manage own supplement logs" ON public.daily_supplement_logs;
+CREATE POLICY "Patients manage own supplement logs"
+  ON public.daily_supplement_logs FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+-- RLS POLICIES FOR FETAL MOVEMENT LOGS
+DROP POLICY IF EXISTS "Patients manage own fetal movement logs" ON public.fetal_movement_logs;
+CREATE POLICY "Patients manage own fetal movement logs"
+  ON public.fetal_movement_logs FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+-- RLS POLICIES FOR MEDICAL RECORDS
+DROP POLICY IF EXISTS "Patients manage own medical records" ON public.medical_records;
+CREATE POLICY "Patients manage own medical records"
+  ON public.medical_records FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+

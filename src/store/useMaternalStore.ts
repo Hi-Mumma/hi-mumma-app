@@ -24,7 +24,19 @@ import {
   mockWeekData
 } from '../mock/maternalData';
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-import { getFullUserProfile } from '../lib/supabaseServices';
+import {
+  getFullUserProfile,
+  fetchPregnancyTestRecords,
+  upsertPregnancyTestRecord,
+  fetchUltrasoundMilestonesRecords,
+  upsertUltrasoundMilestoneRecord,
+  fetchDailySupplementLog,
+  upsertDailySupplementLog,
+  fetchFetalMovementLogs,
+  addFetalMovementLog,
+  fetchMedicalRecords,
+  addMedicalRecord
+} from '../lib/supabaseServices';
 import { calculateGestationalWeekFromDueDate } from '../utils/pregnancyStage';
 
 export const useMaternalStore = () => {
@@ -135,7 +147,7 @@ export const useMaternalStore = () => {
     setCurrentUser(null);
   };
 
-  // Daily Supplements (Phase 1 local, migrated in Phase 2)
+  // Daily Supplements (Phase 1 local, persisted to Supabase in Phase 3)
   const [supplements, setSupplements] = useState<DailySupplements>({
     iron: false,
     folicAcid: true,
@@ -143,7 +155,13 @@ export const useMaternalStore = () => {
   });
 
   const toggleSupplement = (key: keyof DailySupplements) => {
-    setSupplements((prev) => ({ ...prev, [key]: !prev[key] }));
+    setSupplements((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      if (currentUser?.id && isSupabaseConfigured) {
+        upsertDailySupplementLog(currentUser.id, next);
+      }
+      return next;
+    });
   };
 
   const [pregnancyTestTracking, setPregnancyTestTracking] = useState<PregnancyTestTrackingEntry[]>(
@@ -154,23 +172,42 @@ export const useMaternalStore = () => {
   );
 
   const togglePregnancyTest = (id: string) => {
-    setPregnancyTestTracking((prev) =>
-      prev.map((entry) =>
-        entry.id === id
-          ? { ...entry, status: entry.status === 'recorded' ? 'not_recorded' : 'recorded' }
-          : entry
-      )
-    );
+    setPregnancyTestTracking((prev) => {
+      const updated = prev.map((entry) => {
+        if (entry.id === id) {
+          const nextStatus = entry.status === 'recorded' ? 'not_recorded' : 'recorded';
+          if (currentUser?.id && isSupabaseConfigured) {
+            upsertPregnancyTestRecord(currentUser.id, entry.id, entry.name, nextStatus as any);
+          }
+          return { ...entry, status: nextStatus as any };
+        }
+        return entry;
+      });
+      return updated;
+    });
   };
 
   const toggleUltrasoundMilestone = (id: string) => {
-    setUltrasoundMilestones((prev) =>
-      prev.map((entry) =>
-        entry.id === id
-          ? { ...entry, status: entry.status === 'recorded' ? 'not_recorded' : 'recorded' }
-          : entry
-      )
-    );
+    setUltrasoundMilestones((prev) => {
+      const updated = prev.map((entry) => {
+        if (entry.id === id) {
+          const nextStatus = entry.status === 'recorded' ? 'not_recorded' : 'recorded';
+          if (currentUser?.id && isSupabaseConfigured) {
+            upsertUltrasoundMilestoneRecord(
+              currentUser.id,
+              entry.id,
+              entry.title,
+              nextStatus as any,
+              entry.timing,
+              entry.description
+            );
+          }
+          return { ...entry, status: nextStatus as any };
+        }
+        return entry;
+      });
+      return updated;
+    });
   };
 
   // Blood Pressure Logs (Phase 1 local, migrated in Phase 2)
@@ -231,7 +268,7 @@ export const useMaternalStore = () => {
     setBloodSugarEntries((prev) => [entry, ...prev]);
   };
 
-  // Fetal Movements Log (Phase 1 local, migrated in Phase 2)
+  // Fetal Movements Log (Phase 1 local, persisted to Supabase in Phase 3)
   const [movementEntries, setMovementEntries] = useState<FetalMovementEntry[]>([
     {
       id: 'mv-1',
@@ -252,17 +289,27 @@ export const useMaternalStore = () => {
   ]);
 
   const addMovementEntry = (count: number, durationMinutes: number) => {
+    const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timestampStr = 'Today';
     const newEntry: FetalMovementEntry = {
       id: `mv-${Date.now()}`,
-      timestamp: 'Today',
-      timeLabel: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: timestampStr,
+      timeLabel,
       count,
       durationMinutes
     };
     setMovementEntries((prev) => [newEntry, ...prev]);
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      addFetalMovementLog(currentUser.id, count, durationMinutes, timeLabel, timestampStr).then((saved) => {
+        if (saved) {
+          setMovementEntries((prev) => prev.map((item) => (item.id === newEntry.id ? saved : item)));
+        }
+      });
+    }
   };
 
-  // Digital Records Vault (Phase 1 local, migrated in Phase 3)
+  // Digital Records Vault (Phase 1 local, persisted to Supabase in Phase 3)
   const [records, setRecords] = useState<MedicalRecordItem[]>(initialMockRecords);
   const [selectedRecordFolder, setSelectedRecordFolder] = useState<RecordFolderType>('second_trimester');
 
@@ -271,16 +318,87 @@ export const useMaternalStore = () => {
     fileType: 'pdf' | 'camera' | 'gallery',
     folder: RecordFolderType
   ) => {
+    const fileSize = fileType === 'pdf' ? '1.4 MB' : '2.8 MB';
     const newRecord: MedicalRecordItem = {
       id: `rec-${Date.now()}`,
       name,
       folder,
       date: 'Just now',
       fileType,
-      fileSize: fileType === 'pdf' ? '1.4 MB' : '2.8 MB'
+      fileSize
     };
     setRecords((prev) => [newRecord, ...prev]);
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      addMedicalRecord(currentUser.id, name, folder, fileType, fileSize).then((saved) => {
+        if (saved) {
+          setRecords((prev) => prev.map((item) => (item.id === newRecord.id ? saved : item)));
+        }
+      });
+    }
   };
+
+  // Fetch & Sync Phase 3 Care Data from Supabase when user logs in
+  useEffect(() => {
+    let active = true;
+
+    async function syncCareData(userId: string) {
+      if (!isSupabaseConfigured) return;
+
+      try {
+        const [dbTests, dbUltrasounds, dbSupplements, dbMovements, dbRecords] = await Promise.all([
+          fetchPregnancyTestRecords(userId),
+          fetchUltrasoundMilestonesRecords(userId),
+          fetchDailySupplementLog(userId),
+          fetchFetalMovementLogs(userId),
+          fetchMedicalRecords(userId)
+        ]);
+
+        if (!active) return;
+
+        if (dbTests.length > 0) {
+          setPregnancyTestTracking((prev) =>
+            prev.map((item) => {
+              const match = dbTests.find((t) => t.id === item.id);
+              return match ? { ...item, status: match.status } : item;
+            })
+          );
+        }
+
+        if (dbUltrasounds.length > 0) {
+          setUltrasoundMilestones((prev) =>
+            prev.map((item) => {
+              const match = dbUltrasounds.find((u) => u.id === item.id);
+              return match ? { ...item, status: match.status } : item;
+            })
+          );
+        }
+
+        if (dbSupplements) {
+          setSupplements(dbSupplements);
+        }
+
+        if (dbMovements.length > 0) {
+          setMovementEntries(dbMovements);
+        }
+
+        if (dbRecords.length > 0) {
+          setRecords(dbRecords);
+        }
+      } catch (err) {
+        console.error('Error syncing Phase 3 Care data from Supabase:', err);
+      }
+    }
+
+    if (currentUser?.id) {
+      syncCareData(currentUser.id);
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id]);
+
 
   // Clinical Visits & OB-GYN Questions (Phase 1 local, migrated in Phase 2)
   const [visits, setVisits] = useState<PrenatalVisit[]>(initialVisits);
