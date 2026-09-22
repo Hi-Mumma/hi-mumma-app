@@ -188,3 +188,24 @@ export interface FetalDevelopmentWeek {
   developmentalMilestone: string;
   maternalBodyChanges: string;
 }
+
+export interface CommunityPost {
+  id: string;
+  userId: string;
+  authorName: string;
+  category: 'General Support' | 'Trimester Tips' | 'Postpartum Care' | 'Nutrition';
+  title: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface ExpertQuestion {
+  id: string;
+  patientId: string;
+  topic: string;
+  question: string;
+  status: 'pending' | 'answered';
+  answer?: string;
+  createdAt: string;
+}
+

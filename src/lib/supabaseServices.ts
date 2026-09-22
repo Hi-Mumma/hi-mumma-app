@@ -11,7 +11,9 @@ import {
   MedicalRecordItem,
   RecordFolderType,
   MedicalTrackingStatus,
-  ChecklistItem
+  ChecklistItem,
+  CommunityPost,
+  ExpertQuestion
 } from '../types';
 
 export interface DatabaseProfile {
@@ -811,5 +813,134 @@ export async function updatePatientPostpartumState(
     console.error('Error updating patient postpartum state:', error.message);
   }
 }
+
+/* ====================================================================
+   PHASE 5: COMMUNITY & EXPERT Q&A SERVICES
+   ==================================================================== */
+
+/**
+ * Fetch all community posts
+ */
+export async function fetchCommunityPosts(): Promise<CommunityPost[]> {
+  const { data, error } = await supabase
+    .from('community_posts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching community posts:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    authorName: row.author_name,
+    category: row.category as CommunityPost['category'],
+    title: row.title,
+    content: row.content,
+    createdAt: row.created_at
+  }));
+}
+
+/**
+ * Add a new community post
+ */
+export async function addCommunityPost(
+  userId: string,
+  authorName: string,
+  category: CommunityPost['category'],
+  title: string,
+  content: string
+): Promise<CommunityPost | null> {
+  const { data, error } = await supabase
+    .from('community_posts')
+    .insert({
+      user_id: userId,
+      author_name: authorName,
+      category,
+      title,
+      content
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error adding community post:', error.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    userId: data.user_id,
+    authorName: data.author_name,
+    category: data.category as CommunityPost['category'],
+    title: data.title,
+    content: data.content,
+    createdAt: data.created_at
+  };
+}
+
+/**
+ * Fetch expert Q&A questions submitted by a patient
+ */
+export async function fetchPatientExpertQuestions(patientId: string): Promise<ExpertQuestion[]> {
+  const { data, error } = await supabase
+    .from('expert_questions')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching expert questions:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    patientId: row.patient_id,
+    topic: row.topic,
+    question: row.question,
+    status: row.status as 'pending' | 'answered',
+    answer: row.answer || undefined,
+    createdAt: row.created_at
+  }));
+}
+
+/**
+ * Add a new question to Expert Q&A
+ */
+export async function addExpertQuestion(
+  patientId: string,
+  topic: string,
+  questionText: string
+): Promise<ExpertQuestion | null> {
+  const { data, error } = await supabase
+    .from('expert_questions')
+    .insert({
+      patient_id: patientId,
+      topic,
+      question: questionText,
+      status: 'pending'
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('Error inserting expert question:', error.message);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    patientId: data.patient_id,
+    topic: data.topic,
+    question: data.question,
+    status: data.status as 'pending' | 'answered',
+    answer: data.answer || undefined,
+    createdAt: data.created_at
+  };
+}
+
 
 

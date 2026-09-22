@@ -405,4 +405,75 @@ CREATE POLICY "Patients manage own prenatal visit questions"
   USING (auth.uid() = patient_id)
   WITH CHECK (auth.uid() = patient_id);
 
+-- ====================================================================
+-- HI MUMMA - PHASE 5 COMMUNITY & EXPERT Q&A TABLES & RLS
+-- ====================================================================
+
+-- 13. COMMUNITY POSTS TABLE
+CREATE TABLE IF NOT EXISTS public.community_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  author_name TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('General Support', 'Trimester Tips', 'Postpartum Care', 'Nutrition')),
+  title TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 14. EXPERT QUESTIONS TABLE
+CREATE TABLE IF NOT EXISTS public.expert_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  topic TEXT NOT NULL,
+  question TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'answered')),
+  answer TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- INDEXES FOR PERFORMANCE
+CREATE INDEX IF NOT EXISTS idx_community_posts_created ON public.community_posts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_expert_questions_patient ON public.expert_questions(patient_id);
+
+-- ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.community_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.expert_questions ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR COMMUNITY POSTS
+DROP POLICY IF EXISTS "Authenticated users can read community posts" ON public.community_posts;
+CREATE POLICY "Authenticated users can read community posts"
+  ON public.community_posts FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+DROP POLICY IF EXISTS "Users can insert own community posts" ON public.community_posts;
+CREATE POLICY "Users can insert own community posts"
+  ON public.community_posts FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own community posts" ON public.community_posts;
+CREATE POLICY "Users can update own community posts"
+  ON public.community_posts FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete own community posts" ON public.community_posts;
+CREATE POLICY "Users can delete own community posts"
+  ON public.community_posts FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- RLS POLICIES FOR EXPERT QUESTIONS
+DROP POLICY IF EXISTS "Patients manage own expert questions" ON public.expert_questions;
+DROP POLICY IF EXISTS "Patients view own expert questions" ON public.expert_questions;
+DROP POLICY IF EXISTS "Patients insert own expert questions" ON public.expert_questions;
+
+CREATE POLICY "Patients view own expert questions"
+  ON public.expert_questions FOR SELECT
+  USING (auth.uid() = patient_id);
+
+CREATE POLICY "Patients insert own expert questions"
+  ON public.expert_questions FOR INSERT
+  WITH CHECK (auth.uid() = patient_id AND status = 'pending' AND answer IS NULL);
+
+
+
 

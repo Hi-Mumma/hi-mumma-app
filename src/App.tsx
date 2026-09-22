@@ -54,6 +54,10 @@ export default function App() {
     addOBQuestion,
     bagItems,
     toggleBagItem,
+    communityPosts,
+    addCommunityPost,
+    expertQuestions,
+    addExpertQuestion,
     currentUser,
     setCurrentUser,
     logout,
@@ -182,7 +186,15 @@ export default function App() {
         />
       )}
 
-      {currentTab === 'learn' && <LearnView phase={phase} />}
+      {currentTab === 'learn' && (
+        <LearnView
+          phase={phase}
+          communityPosts={communityPosts}
+          onAddCommunityPost={addCommunityPost}
+          expertQuestions={expertQuestions}
+          onAddExpertQuestion={addExpertQuestion}
+        />
+      )}
 
       {currentTab === 'more' && (
         <MoreView

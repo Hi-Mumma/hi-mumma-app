@@ -13,7 +13,9 @@ import {
   ChecklistItem,
   UserProfile,
   PregnancyTestTrackingEntry,
-  UltrasoundMilestoneTrackingEntry
+  UltrasoundMilestoneTrackingEntry,
+  CommunityPost,
+  ExpertQuestion
 } from '../types';
 import {
   initialMockRecords,
@@ -40,7 +42,11 @@ import {
   upsertDeliveryPrepItem,
   fetchPrenatalVisitQuestions,
   addPrenatalVisitQuestion,
-  updatePatientPostpartumState
+  updatePatientPostpartumState,
+  fetchCommunityPosts,
+  addCommunityPost,
+  fetchPatientExpertQuestions,
+  addExpertQuestion
 } from '../lib/supabaseServices';
 import { calculateGestationalWeekFromDueDate } from '../utils/pregnancyStage';
 
@@ -357,7 +363,85 @@ export const useMaternalStore = () => {
     }
   };
 
-  // Fetch & Sync Phase 3 Care & Phase 4 Reminders/Delivery Data from Supabase when user logs in
+  // Phase 5 Community Posts & Expert Questions State
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([
+    {
+      id: 'cp-1',
+      userId: 'demo-1',
+      authorName: 'Ananya M.',
+      category: 'Nutrition',
+      title: 'Safe morning sickness smoothie recipes?',
+      content: 'Looking for gentle, refreshing smoothie ideas for early morning nausea during the first trimester.',
+      createdAt: '2 hours ago'
+    },
+    {
+      id: 'cp-2',
+      userId: 'demo-2',
+      authorName: 'Priya K.',
+      category: 'Postpartum Care',
+      title: 'Essential rest tips for the first two weeks',
+      content: 'Setting boundaries with visitors helped my recovery tremendously during the initial 14 days postpartum.',
+      createdAt: '1 day ago'
+    }
+  ]);
+
+  const [expertQuestions, setExpertQuestions] = useState<ExpertQuestion[]>([
+    {
+      id: 'eq-1',
+      patientId: 'demo-patient',
+      topic: 'Nutrition & Iron',
+      question: 'Is it normal for iron tablets to cause mild constipation, and how can I adjust my diet safely?',
+      status: 'answered',
+      answer: 'Yes, oral iron supplements frequently cause mild GI changes. Pair your iron tablet with Vitamin C (such as citrus juices) and increase fiber and water intake.',
+      createdAt: '3 days ago'
+    }
+  ]);
+
+  const handleAddCommunityPost = (category: CommunityPost['category'], title: string, content: string) => {
+    if (!title.trim() || !content.trim()) return;
+    const authorName = currentUser?.name || 'Mumma Member';
+    const newPost: CommunityPost = {
+      id: `cp-${Date.now()}`,
+      userId: currentUser?.id || 'guest',
+      authorName,
+      category,
+      title: title.trim(),
+      content: content.trim(),
+      createdAt: 'Just now'
+    };
+    setCommunityPosts((prev) => [newPost, ...prev]);
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      addCommunityPost(currentUser.id, authorName, category, title.trim(), content.trim()).then((saved) => {
+        if (saved) {
+          setCommunityPosts((prev) => prev.map((p) => (p.id === newPost.id ? saved : p)));
+        }
+      });
+    }
+  };
+
+  const handleAddExpertQuestion = (topic: string, questionText: string) => {
+    if (!questionText.trim()) return;
+    const newQuestion: ExpertQuestion = {
+      id: `eq-${Date.now()}`,
+      patientId: currentUser?.id || 'guest',
+      topic: topic.trim() || 'General Care',
+      question: questionText.trim(),
+      status: 'pending',
+      createdAt: 'Just now'
+    };
+    setExpertQuestions((prev) => [newQuestion, ...prev]);
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      addExpertQuestion(currentUser.id, topic.trim() || 'General Care', questionText.trim()).then((saved) => {
+        if (saved) {
+          setExpertQuestions((prev) => prev.map((q) => (q.id === newQuestion.id ? saved : q)));
+        }
+      });
+    }
+  };
+
+  // Fetch & Sync Phase 3 Care, Phase 4 Reminders/Delivery & Phase 5 Community/Q&A Data from Supabase
   useEffect(() => {
     let active = true;
 
@@ -372,7 +456,9 @@ export const useMaternalStore = () => {
           dbMovements,
           dbRecords,
           dbPrepItems,
-          dbVisitQuestions
+          dbVisitQuestions,
+          dbCommunityPosts,
+          dbExpertQuestions
         ] = await Promise.all([
           fetchPregnancyTestRecords(userId),
           fetchUltrasoundMilestonesRecords(userId),
@@ -380,7 +466,9 @@ export const useMaternalStore = () => {
           fetchFetalMovementLogs(userId),
           fetchMedicalRecords(userId),
           fetchDeliveryPrepItems(userId),
-          fetchPrenatalVisitQuestions(userId)
+          fetchPrenatalVisitQuestions(userId),
+          fetchCommunityPosts(),
+          fetchPatientExpertQuestions(userId)
         ]);
 
         if (!active) return;
@@ -437,6 +525,14 @@ export const useMaternalStore = () => {
               return visit;
             })
           );
+        }
+
+        if (dbCommunityPosts.length > 0) {
+          setCommunityPosts(dbCommunityPosts);
+        }
+
+        if (dbExpertQuestions.length > 0) {
+          setExpertQuestions(dbExpertQuestions);
         }
       } catch (err) {
         console.error('Error syncing Care & Delivery data from Supabase:', err);
@@ -531,9 +627,14 @@ export const useMaternalStore = () => {
     addOBQuestion,
     bagItems,
     toggleBagItem,
+    communityPosts,
+    addCommunityPost: handleAddCommunityPost,
+    expertQuestions,
+    addExpertQuestion: handleAddExpertQuestion,
     currentUser,
     setCurrentUser,
     logout,
     isAuthLoading
   };
 };
+
