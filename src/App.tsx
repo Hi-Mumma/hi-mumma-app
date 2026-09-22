@@ -192,6 +192,8 @@ export default function App() {
       {currentTab === 'learn' && (
         <LearnView
           phase={phase}
+          currentWeek={currentWeek}
+          postpartumDay={postpartumDay}
           currentUser={currentUser}
           communityPosts={communityPosts}
           onAddCommunityPost={addCommunityPost}

@@ -5,6 +5,8 @@ import { AiAssistant } from '../ai/AiAssistant';
 
 interface LearnViewProps {
   phase: PregnancyPhase;
+  currentWeek?: number;
+  postpartumDay?: number;
   currentUser?: UserProfile | null;
   communityPosts?: CommunityPost[];
   onAddCommunityPost?: (category: CommunityPost['category'], title: string, content: string) => void;
@@ -14,6 +16,8 @@ interface LearnViewProps {
 
 export const LearnView: React.FC<LearnViewProps> = ({
   phase,
+  currentWeek = 24,
+  postpartumDay = 8,
   currentUser,
   communityPosts = [],
   onAddCommunityPost,
@@ -57,7 +61,12 @@ export const LearnView: React.FC<LearnViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Hi Mumma Educational AI Assistant */}
-      <AiAssistant currentUser={currentUser} />
+      <AiAssistant
+        currentUser={currentUser}
+        phase={phase}
+        currentWeek={currentWeek}
+        postpartumDay={postpartumDay}
+      />
 
       {/* Category Tabs */}
       <div className="flex items-center gap-1.5 p-1 bg-white border border-[#E8EFF7] rounded-2xl shadow-xs overflow-x-auto no-scrollbar">

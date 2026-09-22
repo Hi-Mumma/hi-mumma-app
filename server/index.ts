@@ -191,7 +191,7 @@ app.post('/api/ai', async (req: Request, res: Response) => {
     }
 
     // 4. Input validation
-    const { message, previousResponseId } = req.body || {};
+    const { message, stageContext, previousResponseId } = req.body || {};
 
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({
@@ -224,13 +224,20 @@ app.post('/api/ai', async (req: Request, res: Response) => {
 
     const isKeyConfigured = Boolean(geminiApiKey && geminiApiKey.trim().length > 0);
 
+    // Process minimal non-sensitive pregnancy stage context if supplied
+    let promptContents = trimmedMessage;
+    if (stageContext && typeof stageContext === 'string' && stageContext.trim().length > 0) {
+      const cleanStageContext = stageContext.trim().slice(0, 100);
+      promptContents = `[Current Pregnancy Stage Context: ${cleanStageContext}]\n\nUser Question: ${trimmedMessage}`;
+    }
+
     // Safe non-sensitive diagnostic logging
     console.log('[AI API Diagnostic]', {
       postEndpointReached: true,
       authenticatedPatientVerified: true,
       geminiKeyConfigured: isKeyConfigured,
       geminiClientInitialized: isKeyConfigured,
-      geminiRequestStarted: true,
+      hasStageContext: Boolean(stageContext),
       modelUsed: 'gemini-3.6-flash'
     });
 
@@ -247,7 +254,7 @@ app.post('/api/ai', async (req: Request, res: Response) => {
 
     const geminiResponse = await ai.models.generateContent({
       model: 'gemini-3.6-flash',
-      contents: trimmedMessage,
+      contents: promptContents,
       config: {
         systemInstruction: SYSTEM_PROMPT
       }

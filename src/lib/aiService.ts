@@ -9,6 +9,7 @@ export interface AiApiResponse {
 
 export interface AiMessageRequest {
   message: string;
+  stageContext?: string;
   previousResponseId?: string;
 }
 
@@ -17,7 +18,7 @@ export interface AiMessageRequest {
  * Uses the active Supabase JWT session for authorization.
  */
 export async function sendAiMessage(request: AiMessageRequest): Promise<AiApiResponse> {
-  const { message, previousResponseId } = request;
+  const { message, stageContext, previousResponseId } = request;
 
   if (!message || !message.trim()) {
     return {
@@ -41,7 +42,7 @@ export async function sendAiMessage(request: AiMessageRequest): Promise<AiApiRes
     const baseUrl = (import.meta.env.VITE_AI_API_URL || 'http://localhost:3001').replace(/\/+$/, '');
     const endpoint = `${baseUrl}/api/ai`;
 
-    // 3. Send message payload to secure proxy server
+    // 3. Send message payload with minimal pregnancy stage context
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -50,6 +51,7 @@ export async function sendAiMessage(request: AiMessageRequest): Promise<AiApiRes
       },
       body: JSON.stringify({
         message: message.trim(),
+        stageContext: stageContext ? stageContext.trim() : undefined,
         previousResponseId: previousResponseId ? previousResponseId.trim() : undefined
       })
     });

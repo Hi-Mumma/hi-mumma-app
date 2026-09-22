@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { UserProfile } from '../../types';
+import { UserProfile, PregnancyPhase } from '../../types';
 import { sendAiMessage } from '../../lib/aiService';
 
 interface AiAssistantProps {
   currentUser?: UserProfile | null;
+  phase?: PregnancyPhase;
+  currentWeek?: number;
+  postpartumDay?: number;
 }
 
 interface ChatMessage {
@@ -20,7 +23,152 @@ const EXAMPLE_PROMPTS = [
   'What should I organize before a hospital visit?'
 ];
 
-export const AiAssistant: React.FC<AiAssistantProps> = ({ currentUser }) => {
+/**
+ * Safe React Markdown inline formatter for bold text and inline code.
+ * Prevents using dangerouslySetInnerHTML.
+ */
+function parseInlineFormatting(text: string): React.ReactNode[] {
+  const boldParts = text.split(/(\*\*.*?\*\*)/g);
+  return boldParts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**') && part.length >= 4) {
+      return (
+        <strong key={i} className="font-bold text-[#192231]">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    const codeParts = part.split(/(`.*?`)/g);
+    return codeParts.map((sub, j) => {
+      if (sub.startsWith('`') && sub.endsWith('`') && sub.length >= 2) {
+        return (
+          <code key={`${i}-${j}`} className="px-1 py-0.5 bg-[#E8EFF7] rounded text-[11px] font-mono">
+            {sub.slice(1, -1)}
+          </code>
+        );
+      }
+      return sub;
+    });
+  });
+}
+
+/**
+ * Safe React Markdown block renderer for headings, bold, bullet & numbered lists, and paragraphs.
+ * Completely safe without dangerouslySetInnerHTML.
+ */
+
+const SafeMarkdownText: React.FC<{ text: string }> = ({ text }) => {
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentList: React.ReactNode[] | null = null;
+  let isNumbered = false;
+
+  const flushList = () => {
+    if (currentList && currentList.length > 0) {
+      if (isNumbered) {
+        elements.push(
+          <ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1 my-1.5 pl-1 text-xs">
+            {currentList}
+          </ol>
+        );
+      } else {
+        elements.push(
+          <ul key={`ul-${elements.length}`} className="list-disc list-inside space-y-1 my-1.5 pl-1 text-xs">
+            {currentList}
+          </ul>
+        );
+      }
+      currentList = null;
+    }
+  };
+
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) {
+      flushList();
+      return;
+    }
+
+    // Headings
+    if (trimmed.startsWith('### ')) {
+      flushList();
+      elements.push(
+        <h4 key={index} className="font-black text-xs text-[#192231] mt-2 mb-1">
+          {parseInlineFormatting(trimmed.slice(4))}
+        </h4>
+      );
+      return;
+    }
+    if (trimmed.startsWith('## ')) {
+      flushList();
+      elements.push(
+        <h3 key={index} className="font-black text-xs text-[#192231] mt-2.5 mb-1">
+          {parseInlineFormatting(trimmed.slice(3))}
+        </h3>
+      );
+      return;
+    }
+    if (trimmed.startsWith('# ')) {
+      flushList();
+      elements.push(
+        <h2 key={index} className="font-black text-sm text-[#192231] mt-3 mb-1">
+          {parseInlineFormatting(trimmed.slice(2))}
+        </h2>
+      );
+      return;
+    }
+
+    // Bullet List Items (* or -)
+    if (trimmed.startsWith('* ') || trimmed.startsWith('- ')) {
+      if (currentList && isNumbered) flushList();
+      if (!currentList) {
+        currentList = [];
+        isNumbered = false;
+      }
+      currentList.push(
+        <li key={index} className="leading-relaxed">
+          {parseInlineFormatting(trimmed.slice(2))}
+        </li>
+      );
+      return;
+    }
+
+    // Numbered List Items (1. 2. etc)
+    const numberedMatch = trimmed.match(/^(\d+)\.\s+(.*)/);
+    if (numberedMatch) {
+      if (currentList && !isNumbered) flushList();
+      if (!currentList) {
+        currentList = [];
+        isNumbered = true;
+      }
+      currentList.push(
+        <li key={index} className="leading-relaxed">
+          {parseInlineFormatting(numberedMatch[2])}
+        </li>
+      );
+      return;
+    }
+
+    // Regular Paragraph
+    flushList();
+    elements.push(
+      <p key={index} className="leading-relaxed my-0.5">
+        {parseInlineFormatting(trimmed)}
+      </p>
+    );
+  });
+
+  flushList();
+
+  return <div className="space-y-1 text-xs text-[#192231]">{elements}</div>;
+};
+
+export const AiAssistant: React.FC<AiAssistantProps> = ({
+  currentUser,
+  phase = 'pregnancy',
+  currentWeek = 24,
+  postpartumDay = 8
+}) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [previousResponseId, setPreviousResponseId] = useState<string | undefined>(undefined);
@@ -28,6 +176,18 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ currentUser }) => {
   const [error, setError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Derived minimal non-sensitive pregnancy stage context
+  const stageContext =
+    phase === 'postpartum'
+      ? `Postpartum Day ${postpartumDay}`
+      : `Week ${currentWeek}, ${
+          currentWeek <= 13
+            ? 'First Trimester'
+            : currentWeek <= 27
+            ? 'Second Trimester'
+            : 'Third Trimester'
+        }`;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -57,6 +217,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ currentUser }) => {
     try {
       const result = await sendAiMessage({
         message: query,
+        stageContext,
         previousResponseId
       });
 
@@ -135,10 +296,13 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ currentUser }) => {
             ✨
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="text-xs font-black text-[#192231]">Hi Mumma AI Assistant</h3>
               <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#FDF2F7] text-[#EA81AA] border border-[#FCE7F3]">
                 Gemini 3.6 Flash
+              </span>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-[#EBF5FF] text-[#0284C7] border border-[#BAE6FD]">
+                {stageContext}
               </span>
             </div>
             <p className="text-[10px] text-[#8F9EB3]">Educational support for your pregnancy journey</p>
@@ -178,7 +342,7 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ currentUser }) => {
       )}
 
       {/* Conversation Window */}
-      <div className="min-h-[160px] max-h-[360px] overflow-y-auto space-y-3 pr-1 no-scrollbar">
+      <div className="min-h-[160px] max-h-[380px] overflow-y-auto space-y-3 pr-1 no-scrollbar">
         {messages.length === 0 ? (
           <div className="p-4 rounded-2xl bg-[#FAFBFD] border border-[#EBF1F9] text-center space-y-2.5">
             <div className="text-xl">🌸</div>
@@ -228,7 +392,11 @@ export const AiAssistant: React.FC<AiAssistantProps> = ({ currentUser }) => {
                     : 'bg-[#FAFBFD] text-[#192231] border border-[#E2ECF7] rounded-tl-xs shadow-2xs'
                 }`}
               >
-                {msg.text}
+                {msg.sender === 'user' ? (
+                  msg.text
+                ) : (
+                  <SafeMarkdownText text={msg.text} />
+                )}
               </div>
             </div>
           ))
