@@ -114,22 +114,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onDismiss 
               name: data.user.user_metadata?.name || email.split('@')[0],
               role: 'patient',
               provider: 'email',
-              is_onboarded: true
+              is_onboarded: false
             });
 
-            await createOrUpdatePatientProfile(data.user.id, {
-              due_date: '2026-12-14',
-              is_first_pregnancy: true,
-              location: 'Mumbai, Maharashtra'
-            });
-
-            fullProfile = await getFullUserProfile(data.user.id, data.user.email);
-          } else if (!fullProfile.patientProfile && fullProfile.role === 'patient') {
-            await createOrUpdatePatientProfile(data.user.id, {
-              due_date: '2026-12-14',
-              is_first_pregnancy: true,
-              location: 'Mumbai, Maharashtra'
-            });
             fullProfile = await getFullUserProfile(data.user.id, data.user.email);
           }
 

@@ -78,11 +78,16 @@ export default function App() {
     );
   }
 
-  // ── 1. UNAUTHENTICATED USERS: RENDER AUTHENTICATION / ONBOARDING PIPELINE ──
-  if (!currentUser) {
+  // ── 1. UNAUTHENTICATED OR UNONBOARDED USERS: RENDER AUTHENTICATION / ONBOARDING PIPELINE ──
+  const isPatientUnonboarded =
+    currentUser && currentUser.role === 'patient' && (!currentUser.isOnboarded || !currentUser.patientProfile);
+
+  if (!currentUser || isPatientUnonboarded) {
     return (
       <MobileContainer>
         <AuthFlow
+          initialRole={currentUser?.role || 'patient'}
+          initialStage={currentUser ? 'patient-onboarding' : 'splash'}
           onAuthComplete={(user) => {
             setCurrentUser(user);
             setCurrentTab('home');

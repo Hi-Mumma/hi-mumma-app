@@ -170,6 +170,10 @@ export async function createOrUpdatePatientProfile(
     location: patientData.location?.trim() || null
   };
 
+  if (import.meta.env.DEV) {
+    console.log('[Supabase] Upserting patient_profiles:', { userId, payload });
+  }
+
   const { data, error } = await supabase
     .from('patient_profiles')
     .upsert(payload, { onConflict: 'user_id' })
@@ -177,10 +181,27 @@ export async function createOrUpdatePatientProfile(
     .single();
 
   if (error) {
-    console.error('Error upserting patient profile:', error.message);
+    console.error('[Supabase] Error upserting patient profile:', error.message, error.details);
     throw new Error(`Failed to save patient profile into database: ${error.message}`);
   }
-  return data;
+
+  if (import.meta.env.DEV) {
+    console.log('[Supabase] Successfully upserted patient_profiles row:', data);
+  }
+
+  // Verification: immediately fetch the patient profile row back using the authenticated user ID
+  const { data: verifiedRow, error: verifyError } = await supabase
+    .from('patient_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (verifyError || !verifiedRow) {
+    console.error('[Supabase] Patient profile verification failed:', verifyError?.message);
+    throw new Error(`Patient profile persistence verification failed for user ID ${userId}.`);
+  }
+
+  return verifiedRow;
 }
 
 /**
@@ -328,15 +349,7 @@ export async function getFullUserProfile(userId: string, authEmail?: string): Pr
   let guardianProfileObj: GuardianProfile | undefined = undefined;
 
   if (baseProfile.role === 'patient') {
-    let patientData = await getPatientProfile(userId);
-    if (!patientData && baseProfile.is_onboarded) {
-      patientData = await createOrUpdatePatientProfile(userId, {
-        due_date: '2026-12-14',
-        is_first_pregnancy: true,
-        location: 'Mumbai, Maharashtra'
-      });
-    }
-
+    const patientData = await getPatientProfile(userId);
     const supportPeople = await getSupportPeople(userId);
 
     if (patientData) {
@@ -360,6 +373,12 @@ export async function getFullUserProfile(userId: string, authEmail?: string): Pr
     }
   }
 
+  // A patient is strictly onboarded ONLY if base profile is marked onboarded AND patient_profiles record exists
+  const effectiveIsOnboarded =
+    baseProfile.role === 'patient'
+      ? baseProfile.is_onboarded && patientProfileObj !== undefined
+      : baseProfile.is_onboarded && guardianProfileObj !== undefined;
+
   return {
     id: baseProfile.id,
     name: baseProfile.name,
@@ -368,7 +387,7 @@ export async function getFullUserProfile(userId: string, authEmail?: string): Pr
     avatarUrl: baseProfile.avatar_url || '/mother-hero.jpg',
     provider: baseProfile.provider || 'email',
     dueDate: patientProfileObj?.dueDate,
-    isOnboarded: baseProfile.is_onboarded,
+    isOnboarded: effectiveIsOnboarded,
     patientProfile: patientProfileObj,
     guardianProfile: guardianProfileObj
   };
