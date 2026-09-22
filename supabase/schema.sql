@@ -47,8 +47,14 @@ CREATE TABLE IF NOT EXISTS public.guardian_patient_links (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   guardian_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  status TEXT NOT NULL DEFAULT 'active',
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'pending', 'revoked')),
   allow_vitals_view BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_journey_view BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_care_view BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_reminders_view BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_delivery_prep_view BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_postpartum_view BOOLEAN NOT NULL DEFAULT FALSE,
+  allow_shared_tasks_view BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT unique_guardian_patient_pair UNIQUE (guardian_id, patient_id)
 );
@@ -69,6 +75,18 @@ CREATE POLICY "Users can read own profile"
   ON public.profiles FOR SELECT
   USING (auth.uid() = id);
 
+-- Allow reading basic profile info for linked caregiver or patient
+DROP POLICY IF EXISTS "Users can read linked profiles" ON public.profiles;
+CREATE POLICY "Users can read linked profiles"
+  ON public.profiles FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.guardian_patient_links gpl
+      WHERE (gpl.guardian_id = auth.uid() AND gpl.patient_id = profiles.id)
+         OR (gpl.patient_id = auth.uid() AND gpl.guardian_id = profiles.id)
+    )
+  );
+
 DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 CREATE POLICY "Users can insert own profile"
   ON public.profiles FOR INSERT
@@ -85,6 +103,16 @@ DROP POLICY IF EXISTS "Mothers can read own patient profile" ON public.patient_p
 CREATE POLICY "Mothers can read own patient profile"
   ON public.patient_profiles FOR SELECT
   USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Linked guardians can read patient profile" ON public.patient_profiles;
+CREATE POLICY "Linked guardians can read patient profile"
+  ON public.patient_profiles FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.guardian_patient_links gpl
+      WHERE gpl.guardian_id = auth.uid() AND gpl.patient_id = patient_profiles.user_id AND gpl.status = 'active'
+    )
+  );
 
 DROP POLICY IF EXISTS "Mothers can insert own patient profile" ON public.patient_profiles;
 CREATE POLICY "Mothers can insert own patient profile"
@@ -147,11 +175,16 @@ CREATE POLICY "Guardians or patients can insert relationship link"
   ON public.guardian_patient_links FOR INSERT
   WITH CHECK (auth.uid() = guardian_id OR auth.uid() = patient_id);
 
-DROP POLICY IF EXISTS "Users can update relationship link where involved" ON public.guardian_patient_links;
-CREATE POLICY "Users can update relationship link where involved"
+DROP POLICY IF EXISTS "Mothers control caregiver permissions" ON public.guardian_patient_links;
+CREATE POLICY "Mothers control caregiver permissions"
   ON public.guardian_patient_links FOR UPDATE
-  USING (auth.uid() = guardian_id OR auth.uid() = patient_id)
-  WITH CHECK (auth.uid() = guardian_id OR auth.uid() = patient_id);
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+DROP POLICY IF EXISTS "Mothers can revoke/delete relationship link" ON public.guardian_patient_links;
+CREATE POLICY "Mothers can revoke/delete relationship link"
+  ON public.guardian_patient_links FOR DELETE
+  USING (auth.uid() = patient_id);
 
 -- ====================================================================
 -- SAFE AUTOMATIC PROFILE CREATION TRIGGER FUNCTION
@@ -343,6 +376,19 @@ CREATE POLICY "Patients manage own supplement logs"
   USING (auth.uid() = patient_id)
   WITH CHECK (auth.uid() = patient_id);
 
+DROP POLICY IF EXISTS "Permitted guardians can view supplement logs" ON public.daily_supplement_logs;
+CREATE POLICY "Permitted guardians can view supplement logs"
+  ON public.daily_supplement_logs FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.guardian_patient_links gpl
+      WHERE gpl.guardian_id = auth.uid()
+        AND gpl.patient_id = daily_supplement_logs.patient_id
+        AND gpl.status = 'active'
+        AND (gpl.allow_care_view = TRUE OR gpl.allow_vitals_view = TRUE)
+    )
+  );
+
 -- RLS POLICIES FOR FETAL MOVEMENT LOGS
 DROP POLICY IF EXISTS "Patients manage own fetal movement logs" ON public.fetal_movement_logs;
 CREATE POLICY "Patients manage own fetal movement logs"
@@ -397,6 +443,42 @@ CREATE POLICY "Patients manage own delivery prep items"
   ON public.delivery_prep_items FOR ALL
   USING (auth.uid() = patient_id)
   WITH CHECK (auth.uid() = patient_id);
+
+DROP POLICY IF EXISTS "Permitted guardians can view delivery prep items" ON public.delivery_prep_items;
+CREATE POLICY "Permitted guardians can view delivery prep items"
+  ON public.delivery_prep_items FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.guardian_patient_links gpl
+      WHERE gpl.guardian_id = auth.uid()
+        AND gpl.patient_id = delivery_prep_items.patient_id
+        AND gpl.status = 'active'
+        AND (gpl.allow_shared_tasks_view = TRUE OR gpl.allow_delivery_prep_view = TRUE)
+    )
+  );
+
+DROP POLICY IF EXISTS "Permitted guardians can update shared delivery prep items" ON public.delivery_prep_items;
+CREATE POLICY "Permitted guardians can update shared delivery prep items"
+  ON public.delivery_prep_items FOR UPDATE
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.guardian_patient_links gpl
+      WHERE gpl.guardian_id = auth.uid()
+        AND gpl.patient_id = delivery_prep_items.patient_id
+        AND gpl.status = 'active'
+        AND (gpl.allow_shared_tasks_view = TRUE OR gpl.allow_delivery_prep_view = TRUE)
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM public.guardian_patient_links gpl
+      WHERE gpl.guardian_id = auth.uid()
+        AND gpl.patient_id = delivery_prep_items.patient_id
+        AND gpl.status = 'active'
+        AND (gpl.allow_shared_tasks_view = TRUE OR gpl.allow_delivery_prep_view = TRUE)
+    )
+  );
+
 
 -- RLS POLICIES FOR PRENATAL VISIT QUESTIONS
 DROP POLICY IF EXISTS "Patients manage own prenatal visit questions" ON public.prenatal_visit_questions;

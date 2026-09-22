@@ -13,7 +13,10 @@ import {
   MedicalTrackingStatus,
   ChecklistItem,
   CommunityPost,
-  ExpertQuestion
+  ExpertQuestion,
+  CaregiverPermissions,
+  DatabaseGuardianPatientLink,
+  GuardianLinkedPatientData
 } from '../types';
 
 export interface DatabaseProfile {
@@ -52,7 +55,7 @@ export interface DatabaseSupportPerson {
   phone?: string;
 }
 
-export interface DatabaseGuardianPatientLink {
+export interface DatabaseGuardianPatientLinkRow {
   id: string;
   guardian_id: string;
   patient_id: string;
@@ -299,51 +302,271 @@ export async function addSupportPerson(
 }
 
 /**
- * Get guardian relationship links involving a given user ID
+ * Fetch all caregiver links and permissions for a patient
  */
-export async function getGuardianLinks(userId: string): Promise<DatabaseGuardianPatientLink[]> {
+export async function fetchPatientCaregiverLinks(patientId: string): Promise<DatabaseGuardianPatientLink[]> {
   const { data, error } = await supabase
     .from('guardian_patient_links')
     .select('*')
-    .or(`guardian_id.eq.${userId},patient_id.eq.${userId}`);
+    .eq('patient_id', patientId);
 
   if (error) {
-    console.error('Error fetching guardian links:', error.message);
+    console.error('Error fetching caregiver links:', error.message);
     return [];
   }
 
-  return data || [];
+  const enriched: DatabaseGuardianPatientLink[] = [];
+  for (const row of data || []) {
+    let guardianName = 'Caregiver';
+    let guardianEmail = '';
+
+    const { data: prof } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('id', row.guardian_id)
+      .maybeSingle();
+
+    if (prof) {
+      guardianName = prof.name || 'Caregiver';
+      guardianEmail = prof.email || '';
+    }
+
+    enriched.push({
+      id: row.id,
+      guardianId: row.guardian_id,
+      patientId: row.patient_id,
+      status: row.status as any,
+      permissions: {
+        allowVitalsView: row.allow_vitals_view ?? false,
+        allowJourneyView: row.allow_journey_view ?? false,
+        allowCareView: row.allow_care_view ?? false,
+        allowRemindersView: row.allow_reminders_view ?? false,
+        allowDeliveryPrepView: row.allow_delivery_prep_view ?? false,
+        allowPostpartumView: row.allow_postpartum_view ?? false,
+        allowSharedTasksView: row.allow_shared_tasks_view ?? false
+      },
+      guardianName,
+      guardianEmail,
+      createdAt: row.created_at
+    });
+  }
+
+  return enriched;
 }
 
 /**
- * Create or link a guardian to a patient with optional vitals permission
+ * Update caregiver permissions for a link
  */
-export async function createGuardianLink(
-  guardianId: string,
-  patientId: string,
-  allowVitalsView: boolean = false
-): Promise<DatabaseGuardianPatientLink | null> {
-  const { data, error } = await supabase
+export async function updateCaregiverLinkPermissions(
+  linkId: string,
+  permissions: Partial<CaregiverPermissions>
+): Promise<boolean> {
+  const payload: Record<string, boolean> = {};
+  if (permissions.allowVitalsView !== undefined) payload.allow_vitals_view = permissions.allowVitalsView;
+  if (permissions.allowJourneyView !== undefined) payload.allow_journey_view = permissions.allowJourneyView;
+  if (permissions.allowCareView !== undefined) payload.allow_care_view = permissions.allowCareView;
+  if (permissions.allowRemindersView !== undefined) payload.allow_reminders_view = permissions.allowRemindersView;
+  if (permissions.allowDeliveryPrepView !== undefined) payload.allow_delivery_prep_view = permissions.allowDeliveryPrepView;
+  if (permissions.allowPostpartumView !== undefined) payload.allow_postpartum_view = permissions.allowPostpartumView;
+  if (permissions.allowSharedTasksView !== undefined) payload.allow_shared_tasks_view = permissions.allowSharedTasksView;
+
+  const { error } = await supabase
     .from('guardian_patient_links')
-    .upsert(
-      {
-        guardian_id: guardianId,
-        patient_id: patientId,
-        status: 'active',
-        allow_vitals_view: allowVitalsView
-      },
-      { onConflict: 'guardian_id,patient_id' }
-    )
-    .select('*')
-    .single();
+    .update(payload)
+    .eq('id', linkId);
 
   if (error) {
-    console.error('Error creating guardian link:', error.message);
+    console.error('Error updating caregiver permissions:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Revoke or delete a caregiver relationship link
+ */
+export async function revokeCaregiverLink(linkId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from('guardian_patient_links')
+    .delete()
+    .eq('id', linkId);
+
+  if (error) {
+    console.error('Error revoking caregiver link:', error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Add / link a caregiver by email for a patient
+ */
+export async function createCaregiverLinkByEmail(
+  patientId: string,
+  caregiverEmail: string,
+  relationship: string
+): Promise<DatabaseGuardianPatientLink | null> {
+  const { data: guardianUser } = await supabase
+    .from('profiles')
+    .select('id, name, email')
+    .eq('email', caregiverEmail.trim().toLowerCase())
+    .maybeSingle();
+
+  const guardianId = guardianUser?.id;
+
+  await addSupportPerson(patientId, {
+    name: guardianUser?.name || caregiverEmail.split('@')[0],
+    relationship: relationship as any,
+    phone: ''
+  });
+
+  if (guardianId) {
+    const { data: newLink, error: linkError } = await supabase
+      .from('guardian_patient_links')
+      .upsert(
+        {
+          patient_id: patientId,
+          guardian_id: guardianId,
+          status: 'active',
+          allow_vitals_view: true,
+          allow_journey_view: true,
+          allow_care_view: true,
+          allow_reminders_view: true,
+          allow_delivery_prep_view: true,
+          allow_postpartum_view: true,
+          allow_shared_tasks_view: true
+        },
+        { onConflict: 'guardian_id,patient_id' }
+      )
+      .select('*')
+      .single();
+
+    if (linkError) {
+      console.error('Error creating guardian link:', linkError.message);
+      return null;
+    }
+
+    return {
+      id: newLink.id,
+      guardianId: newLink.guardian_id,
+      patientId: newLink.patient_id,
+      status: newLink.status as any,
+      permissions: {
+        allowVitalsView: newLink.allow_vitals_view,
+        allowJourneyView: newLink.allow_journey_view,
+        allowCareView: newLink.allow_care_view,
+        allowRemindersView: newLink.allow_reminders_view,
+        allowDeliveryPrepView: newLink.allow_delivery_prep_view,
+        allowPostpartumView: newLink.allow_postpartum_view,
+        allowSharedTasksView: newLink.allow_shared_tasks_view
+      },
+      guardianName: guardianUser?.name || 'Caregiver',
+      guardianEmail: caregiverEmail
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Fetch linked patient data for a logged-in caregiver based on granted permissions
+ */
+export async function fetchGuardianLinkedPatientData(
+  guardianId: string
+): Promise<GuardianLinkedPatientData | null> {
+  const { data: link, error: linkErr } = await supabase
+    .from('guardian_patient_links')
+    .select('*')
+    .eq('guardian_id', guardianId)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (linkErr || !link) {
     return null;
   }
 
-  return data;
+  const patientId = link.patient_id;
+
+  const permissions: CaregiverPermissions = {
+    allowVitalsView: link.allow_vitals_view ?? false,
+    allowJourneyView: link.allow_journey_view ?? false,
+    allowCareView: link.allow_care_view ?? false,
+    allowRemindersView: link.allow_reminders_view ?? false,
+    allowDeliveryPrepView: link.allow_delivery_prep_view ?? false,
+    allowPostpartumView: link.allow_postpartum_view ?? false,
+    allowSharedTasksView: link.allow_shared_tasks_view ?? false
+  };
+
+  const { data: pProfile } = await supabase
+    .from('profiles')
+    .select('name')
+    .eq('id', patientId)
+    .maybeSingle();
+
+  const { data: patDetails } = await supabase
+    .from('patient_profiles')
+    .select('due_date')
+    .eq('user_id', patientId)
+    .maybeSingle();
+
+  const patientName = pProfile?.name || 'Mother';
+  const dueDate = patDetails?.due_date || '';
+
+  let currentWeek = 24;
+  if (dueDate) {
+    const due = new Date(dueDate).getTime();
+    const now = new Date().getTime();
+    const weeksRemaining = Math.floor((due - now) / (1000 * 60 * 60 * 24 * 7));
+    currentWeek = Math.max(1, Math.min(40, 40 - weeksRemaining));
+  }
+
+  let supplementsTaken: { taken: number; total: number } | undefined = undefined;
+  if (permissions.allowCareView || permissions.allowVitalsView) {
+    const today = new Date().toISOString().split('T')[0];
+    const { data: suppData } = await supabase
+      .from('daily_supplement_logs')
+      .select('*')
+      .eq('patient_id', patientId)
+      .eq('log_date', today)
+      .maybeSingle();
+
+    if (suppData) {
+      let count = 0;
+      if (suppData.iron) count++;
+      if (suppData.folic_acid) count++;
+      if (suppData.calcium) count++;
+      supplementsTaken = { taken: count, total: 3 };
+    } else {
+      supplementsTaken = { taken: 0, total: 3 };
+    }
+  }
+
+  let sharedPrepItems: ChecklistItem[] | undefined = undefined;
+  if (permissions.allowSharedTasksView || permissions.allowDeliveryPrepView) {
+    const { data: items } = await supabase
+      .from('delivery_prep_items')
+      .select('*')
+      .eq('patient_id', patientId);
+
+    sharedPrepItems = (items || []).map((item) => ({
+      id: item.item_id,
+      label: item.label,
+      category: item.category as any,
+      completed: item.completed
+    }));
+  }
+
+  return {
+    patientId,
+    patientName,
+    currentWeek,
+    dueDate,
+    permissions,
+    supplementsTaken,
+    sharedPrepItems
+  };
 }
+
 
 /**
  * Helper to fetch complete UserProfile object combining base profile, sub-profile, and support people directly from Supabase

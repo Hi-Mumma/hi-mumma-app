@@ -15,7 +15,10 @@ import {
   PregnancyTestTrackingEntry,
   UltrasoundMilestoneTrackingEntry,
   CommunityPost,
-  ExpertQuestion
+  ExpertQuestion,
+  CaregiverPermissions,
+  DatabaseGuardianPatientLink,
+  GuardianLinkedPatientData
 } from '../types';
 import {
   initialMockRecords,
@@ -46,7 +49,12 @@ import {
   fetchCommunityPosts,
   addCommunityPost,
   fetchPatientExpertQuestions,
-  addExpertQuestion
+  addExpertQuestion,
+  fetchPatientCaregiverLinks,
+  updateCaregiverLinkPermissions,
+  revokeCaregiverLink,
+  createCaregiverLinkByEmail,
+  fetchGuardianLinkedPatientData
 } from '../lib/supabaseServices';
 import { calculateGestationalWeekFromDueDate } from '../utils/pregnancyStage';
 
@@ -441,14 +449,79 @@ export const useMaternalStore = () => {
     }
   };
 
-  // Fetch & Sync Phase 3 Care, Phase 4 Reminders/Delivery & Phase 5 Community/Q&A Data from Supabase
+  // Phase 6 Caregiver & Guardian State
+  const [caregiverLinks, setCaregiverLinks] = useState<DatabaseGuardianPatientLink[]>([]);
+  const [guardianLinkedData, setGuardianLinkedData] = useState<GuardianLinkedPatientData | null>(null);
+
+  const handleUpdateCaregiverPermissions = async (
+    linkId: string,
+    permissions: Partial<CaregiverPermissions>
+  ) => {
+    setCaregiverLinks((prev) =>
+      prev.map((link) =>
+        link.id === linkId
+          ? { ...link, permissions: { ...link.permissions, ...permissions } }
+          : link
+      )
+    );
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      await updateCaregiverLinkPermissions(linkId, permissions);
+    }
+  };
+
+  const handleRevokeCaregiverLink = async (linkId: string) => {
+    setCaregiverLinks((prev) => prev.filter((link) => link.id !== linkId));
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      await revokeCaregiverLink(linkId);
+    }
+  };
+
+  const handleAddCaregiverByEmail = async (email: string, relationship: string) => {
+    if (!email.trim() || !currentUser?.id) return;
+    const newLink = await createCaregiverLinkByEmail(currentUser.id, email.trim(), relationship);
+    if (newLink) {
+      setCaregiverLinks((prev) => [newLink, ...prev]);
+    } else {
+      // Optimistic local representation if guardian profile is pending auth signup
+      const localLink: DatabaseGuardianPatientLink = {
+        id: `cgl-${Date.now()}`,
+        guardianId: `pending-${Date.now()}`,
+        patientId: currentUser.id,
+        status: 'pending',
+        guardianName: email.split('@')[0],
+        guardianEmail: email.trim(),
+        permissions: {
+          allowVitalsView: true,
+          allowJourneyView: true,
+          allowCareView: true,
+          allowRemindersView: true,
+          allowDeliveryPrepView: true,
+          allowPostpartumView: true,
+          allowSharedTasksView: true
+        }
+      };
+      setCaregiverLinks((prev) => [localLink, ...prev]);
+    }
+  };
+
+  // Fetch & Sync Phase 3 Care, Phase 4 Reminders/Delivery, Phase 5 Community/Q&A & Phase 6 Caregiver Data from Supabase
   useEffect(() => {
     let active = true;
 
-    async function syncCareData(userId: string) {
+    async function syncCareData(userId: string, role: string) {
       if (!isSupabaseConfigured) return;
 
       try {
+        if (role === 'guardian') {
+          const gData = await fetchGuardianLinkedPatientData(userId);
+          if (active && gData) {
+            setGuardianLinkedData(gData);
+          }
+          return;
+        }
+
         const [
           dbTests,
           dbUltrasounds,
@@ -458,7 +531,8 @@ export const useMaternalStore = () => {
           dbPrepItems,
           dbVisitQuestions,
           dbCommunityPosts,
-          dbExpertQuestions
+          dbExpertQuestions,
+          dbCaregiverLinks
         ] = await Promise.all([
           fetchPregnancyTestRecords(userId),
           fetchUltrasoundMilestonesRecords(userId),
@@ -468,7 +542,8 @@ export const useMaternalStore = () => {
           fetchDeliveryPrepItems(userId),
           fetchPrenatalVisitQuestions(userId),
           fetchCommunityPosts(),
-          fetchPatientExpertQuestions(userId)
+          fetchPatientExpertQuestions(userId),
+          fetchPatientCaregiverLinks(userId)
         ]);
 
         if (!active) return;
@@ -534,19 +609,23 @@ export const useMaternalStore = () => {
         if (dbExpertQuestions.length > 0) {
           setExpertQuestions(dbExpertQuestions);
         }
+
+        if (dbCaregiverLinks.length > 0) {
+          setCaregiverLinks(dbCaregiverLinks);
+        }
       } catch (err) {
         console.error('Error syncing Care & Delivery data from Supabase:', err);
       }
     }
 
     if (currentUser?.id) {
-      syncCareData(currentUser.id);
+      syncCareData(currentUser.id, currentUser.role);
     }
 
     return () => {
       active = false;
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.role]);
 
   // Clinical Visits & OB-GYN Questions (Phase 1 local, persisted in Phase 4)
   const [visits, setVisits] = useState<PrenatalVisit[]>(initialVisits);
@@ -631,10 +710,16 @@ export const useMaternalStore = () => {
     addCommunityPost: handleAddCommunityPost,
     expertQuestions,
     addExpertQuestion: handleAddExpertQuestion,
+    caregiverLinks,
+    updateCaregiverPermissions: handleUpdateCaregiverPermissions,
+    revokeCaregiverLink: handleRevokeCaregiverLink,
+    addCaregiverByEmail: handleAddCaregiverByEmail,
+    guardianLinkedData,
     currentUser,
     setCurrentUser,
     logout,
     isAuthLoading
   };
 };
+
 

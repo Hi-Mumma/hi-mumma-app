@@ -3,36 +3,45 @@ import {
   Heart,
   Shield,
   Calendar,
-  Bell,
   CheckCircle2,
   ExternalLink,
   LogOut,
   Sparkles,
   Coffee,
   Smile,
-  Pill
+  Pill,
+  CheckSquare,
+  Lock
 } from 'lucide-react';
-import { UserProfile } from '../../types';
+import { UserProfile, GuardianLinkedPatientData } from '../../types';
 
 interface GuardianDashboardViewProps {
   currentUser: UserProfile;
   currentWeek: number;
+  guardianLinkedData?: GuardianLinkedPatientData | null;
   onSwitchToPatientView: () => void;
   onLogout: () => void;
+  onToggleSharedTask?: (itemId: string) => void;
 }
 
 export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
   currentUser,
   currentWeek,
+  guardianLinkedData,
   onSwitchToPatientView,
-  onLogout
+  onLogout,
+  onToggleSharedTask
 }) => {
   const [nudgeSentToast, setNudgeSentToast] = useState<string | null>(null);
 
   const patientName =
-    currentUser.guardianProfile?.connectedPatientName || 'Priya Sharma';
-  const guardianName = currentUser.name || 'Rohan';
-  const relationship = currentUser.guardianProfile?.relationship || 'Partner';
+    guardianLinkedData?.patientName ||
+    currentUser.guardianProfile?.connectedPatientName ||
+    'Mother';
+  const guardianName = currentUser.name || 'Caregiver';
+  const relationship = currentUser.guardianProfile?.relationship || 'Support Person';
+  const weekNumber = guardianLinkedData?.currentWeek || currentWeek;
+  const permissions = guardianLinkedData?.permissions;
 
   const sendNudge = (message: string) => {
     setNudgeSentToast(`"${message}" sent to ${patientName}! 💗`);
@@ -63,7 +72,7 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
               Hello, {guardianName} 💙
             </h2>
             <p className="text-xs text-[#5A677D]">
-              Connected to <strong className="text-[#192231]">{patientName}</strong> • Week {currentWeek} of pregnancy
+              Connected to <strong className="text-[#192231]">{patientName}</strong> • Week {weekNumber} of pregnancy
             </p>
           </div>
 
@@ -77,57 +86,104 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
         </div>
       </section>
 
-      {/* ── 2. MUMMA'S ACTIVE STATUS SUMMARY ── */}
+      {/* ── 2. PERMISSION-GOVERNED STATUS SUMMARY ── */}
       <section className="p-4 rounded-3xl bg-white border border-[#E2ECF7] shadow-xs space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-black text-[#192231] flex items-center gap-1.5">
             <Heart className="w-3.5 h-3.5 text-[#EA81AA] fill-[#EA81AA]" />
-            Mumma & Baby's Status Today
+            Mother & Baby's Status Today
           </h3>
           <span className="text-[10px] font-extrabold text-[#34A853] bg-[#DCFCE7] px-2 py-0.5 rounded-full border border-[#BBF7D0]">
-            Latest log available
+            Permission Controlled
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Fetal Growth Card */}
-          <div className="p-3 rounded-2xl bg-[#F8FAFD] border border-[#E8EFF7] space-y-1">
-            <span className="text-[10px] font-bold text-[#7A8B9E] uppercase tracking-wider">
-              Baby Development
-            </span>
-            <p className="text-sm font-black text-[#192231]">Cantaloupe Melon</p>
-            <p className="text-[10px] text-[#5A677D]">
-              ~30 cm • ~600 grams • Hearing mother's voice
-            </p>
-          </div>
+        {permissions ? (
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Trimester Journey Access */}
+            <div className="p-3 rounded-2xl bg-[#F8FAFD] border border-[#E8EFF7] space-y-1">
+              <span className="text-[10px] font-bold text-[#7A8B9E] uppercase tracking-wider">
+                Gestational Status
+              </span>
+              <p className="text-sm font-black text-[#192231]">Week {weekNumber}</p>
+              <p className="text-[10px] text-[#5A677D]">
+                {permissions.allowJourneyView
+                  ? 'Trimester milestone tracking active'
+                  : 'Journey details restricted by Mother'}
+              </p>
+            </div>
 
-          {/* Daily Supplements */}
-          <div className="p-3 rounded-2xl bg-[#FFF5F8] border border-[#FCE7F3] space-y-1">
-            <span className="text-[10px] font-bold text-[#EA81AA] uppercase tracking-wider flex items-center gap-1">
-              <Pill className="w-3 h-3" /> Supplements
-            </span>
-            <p className="text-sm font-black text-[#192231]">2 of 3 Taken</p>
-            <p className="text-[10px] text-[#5A677D]">
-              Folic Acid & Calcium completed
+            {/* Daily Supplements Access */}
+            <div className="p-3 rounded-2xl bg-[#FFF5F8] border border-[#FCE7F3] space-y-1">
+              <span className="text-[10px] font-bold text-[#EA81AA] uppercase tracking-wider flex items-center gap-1">
+                <Pill className="w-3 h-3" /> Supplements
+              </span>
+              {permissions.allowCareView || permissions.allowVitalsView ? (
+                <>
+                  <p className="text-sm font-black text-[#192231]">
+                    {guardianLinkedData?.supplementsTaken?.taken || 0} of {guardianLinkedData?.supplementsTaken?.total || 3} Taken
+                  </p>
+                  <p className="text-[10px] text-[#5A677D]">Today's maternal logs</p>
+                </>
+              ) : (
+                <div className="flex items-center gap-1 text-[10px] text-[#8F9EB3] pt-1">
+                  <Lock className="w-3 h-3 text-[#EA81AA]" />
+                  <span>Restricted by Mother</span>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-2xl bg-[#FAFBFD] border border-[#E8EFF7] space-y-1 text-center">
+            <p className="text-xs font-bold text-[#192231]">Caregiver Connection Linked</p>
+            <p className="text-[10px] text-[#7A8B9E]">
+              Ask {patientName} to grant caregiver view permissions in her settings menu.
             </p>
           </div>
-        </div>
-
-        {/* Clinical Note for Guardian */}
-        <div className="p-3 rounded-2xl bg-[#F0FDF4] border border-[#DCFCE7] flex items-start gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-[#16A34A] shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <p className="text-xs font-bold text-[#166534]">
-              Last BP Reading: 118/76 mmHg
-            </p>
-            <p className="text-[10px] text-[#15803D]">
-              Logged yesterday at 8:30 AM. Keep sharing readings with the care team.
-            </p>
-          </div>
-        </div>
+        )}
       </section>
 
-      {/* ── 3. LOVE NUDGES & SUPPORTIVE ACTIONS ── */}
+      {/* ── 3. SHARED TASKS SECTION ── */}
+      {permissions && (permissions.allowSharedTasksView || permissions.allowDeliveryPrepView) && (
+        <section className="p-4 rounded-3xl bg-white border border-[#E2ECF7] shadow-xs space-y-3">
+          <div className="flex items-center justify-between border-b border-[#F0F4FA] pb-2">
+            <h3 className="text-xs font-black text-[#192231] flex items-center gap-1.5">
+              <CheckSquare className="w-3.5 h-3.5 text-[#2563EB]" />
+              Shared Delivery Preparation Tasks
+            </h3>
+            <span className="text-[10px] text-[#7A8B9E] font-bold">Collaborative List</span>
+          </div>
+
+          {!guardianLinkedData?.sharedPrepItems || guardianLinkedData.sharedPrepItems.length === 0 ? (
+            <p className="text-[10px] text-[#8F9EB3] italic">No shared tasks currently listed.</p>
+          ) : (
+            <div className="space-y-2">
+              {guardianLinkedData.sharedPrepItems.slice(0, 4).map((item) => (
+                <label
+                  key={item.id}
+                  className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FAFBFD] border border-[#EBF1F9] text-xs cursor-pointer hover:border-[#BFDBFE] transition-all"
+                >
+                  <span
+                    className={`font-semibold ${
+                      item.completed ? 'line-through text-[#8F9EB3]' : 'text-[#192231]'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={item.completed}
+                    onChange={() => onToggleSharedTask && onToggleSharedTask(item.id)}
+                    className="accent-[#2563EB] w-4 h-4 cursor-pointer"
+                  />
+                </label>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* ── 4. LOVE NUDGES & SUPPORTIVE ACTIONS ── */}
       <section className="p-4 rounded-3xl bg-white border border-[#E2ECF7] shadow-xs space-y-3">
         <div>
           <h3 className="text-xs font-black text-[#192231] flex items-center gap-1.5">
@@ -175,35 +231,6 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
         </div>
       </section>
 
-      {/* ── 4. CLINICAL CALENDAR & SCANS ── */}
-      <section className="p-4 rounded-3xl bg-white border border-[#E2ECF7] shadow-xs space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-black text-[#192231] flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-[#D8A657]" />
-            Upcoming Clinical Milestone
-          </h3>
-          <span className="text-[10px] font-bold text-[#7A8B9E]">Next 14 Days</span>
-        </div>
-
-        <div className="p-3 rounded-2xl bg-[#FFFBEB] border border-[#FDE68A] space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-[#92400E]">
-              Anomaly Scan (Level II Ultrasound)
-            </span>
-            <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-white text-[#92400E] border border-[#FDE68A]">
-              Week 24
-            </span>
-          </div>
-          <p className="text-[10px] text-[#B45309]">
-            Detailed anatomical evaluation of baby's organs, heart, and placenta position.
-          </p>
-          <div className="pt-1 flex items-center justify-between text-[10px] font-semibold text-[#78350F]">
-            <span>Consulting: Dr. Anita Desai (OB-GYN)</span>
-            <span className="text-[9px] underline">Set Phone Alarm</span>
-          </div>
-        </div>
-      </section>
-
       {/* ── 5. SWITCH TO PATIENT DASHBOARD PREVIEW ── */}
       <section className="p-3.5 rounded-2xl bg-white border border-[#E2ECF7] shadow-2xs flex items-center justify-between">
         <div>
@@ -233,3 +260,4 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
     </div>
   );
 };
+

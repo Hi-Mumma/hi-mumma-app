@@ -58,6 +58,11 @@ export default function App() {
     addCommunityPost,
     expertQuestions,
     addExpertQuestion,
+    caregiverLinks,
+    updateCaregiverPermissions,
+    revokeCaregiverLink,
+    addCaregiverByEmail,
+    guardianLinkedData,
     currentUser,
     setCurrentUser,
     logout,
@@ -69,21 +74,17 @@ export default function App() {
   // ── 0. AUTH SESSION RESTORATION LOADING ──
   if (isAuthLoading) {
     return (
-      <MobileContainer>
-        <div className="flex flex-col items-center justify-center min-h-[550px] space-y-3">
-          <BrandLogo size="lg" />
-          <div className="w-5 h-5 border-2 border-[#EA81AA] border-t-transparent rounded-full animate-spin mt-2" />
-          <p className="text-xs font-bold text-[#5A677D]">Restoring Sanctuary...</p>
+      <div className="min-h-screen bg-[#F0F4FA] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-[#EA81AA] border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-[#5A677D]">Opening Hi Mumma Sanctuary...</span>
         </div>
-      </MobileContainer>
+      </div>
     );
   }
 
-  // ── 1. UNAUTHENTICATED OR UNONBOARDED USERS: RENDER AUTHENTICATION / ONBOARDING PIPELINE ──
-  const isPatientUnonboarded =
-    currentUser && currentUser.role === 'patient' && (!currentUser.isOnboarded || !currentUser.patientProfile);
-
-  if (!currentUser || isPatientUnonboarded) {
+  // ── 1. GUEST / ONBOARDING AUTHENTICATION FLOW ──
+  if (!currentUser || (!currentUser.isOnboarded && currentTab !== 'login')) {
     return (
       <MobileContainer>
         <AuthFlow
@@ -105,6 +106,7 @@ export default function App() {
         <GuardianDashboardView
           currentUser={currentUser}
           currentWeek={currentWeek}
+          guardianLinkedData={guardianLinkedData}
           onSwitchToPatientView={() => {
             // Allows guardian to preview patient application
             setCurrentUser({
@@ -113,6 +115,7 @@ export default function App() {
             });
           }}
           onLogout={logout}
+          onToggleSharedTask={toggleBagItem}
         />
       </MobileContainer>
     );
@@ -205,6 +208,10 @@ export default function App() {
           currentUser={currentUser}
           onOpenLogin={() => setCurrentTab('login')}
           onLogout={logout}
+          caregiverLinks={caregiverLinks}
+          onUpdatePermissions={updateCaregiverPermissions}
+          onRevokeLink={revokeCaregiverLink}
+          onAddCaregiver={addCaregiverByEmail}
         />
       )}
 

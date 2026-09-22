@@ -209,3 +209,35 @@ export interface ExpertQuestion {
   createdAt: string;
 }
 
+export interface CaregiverPermissions {
+  allowVitalsView: boolean;
+  allowJourneyView: boolean;
+  allowCareView: boolean;
+  allowRemindersView: boolean;
+  allowDeliveryPrepView: boolean;
+  allowPostpartumView: boolean;
+  allowSharedTasksView: boolean;
+}
+
+export interface DatabaseGuardianPatientLink {
+  id: string;
+  guardianId: string;
+  patientId: string;
+  status: 'active' | 'pending' | 'revoked';
+  permissions: CaregiverPermissions;
+  guardianName?: string;
+  guardianEmail?: string;
+  createdAt?: string;
+}
+
+export interface GuardianLinkedPatientData {
+  patientId: string;
+  patientName: string;
+  currentWeek: number;
+  dueDate?: string;
+  permissions: CaregiverPermissions;
+  supplementsTaken?: { taken: number; total: number };
+  sharedPrepItems?: ChecklistItem[];
+}
+
+
