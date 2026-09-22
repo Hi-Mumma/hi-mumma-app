@@ -61,6 +61,11 @@ export const useMaternalStore = () => {
         if (session?.user && mounted) {
           const profile = await getFullUserProfile(session.user.id, session.user.email);
           if (profile) {
+            const dueDateStr = profile.dueDate || profile.patientProfile?.dueDate;
+            if (dueDateStr) {
+              const derivedWeek = calculateGestationalWeekFromDueDate(dueDateStr);
+              setCurrentWeek(derivedWeek);
+            }
             setCurrentUser(profile);
           } else {
             // Minimal profile fallback if profile record is still pending onboarding
@@ -91,6 +96,11 @@ export const useMaternalStore = () => {
       if (event === 'SIGNED_IN' && session?.user) {
         const profile = await getFullUserProfile(session.user.id, session.user.email);
         if (profile) {
+          const dueDateStr = profile.dueDate || profile.patientProfile?.dueDate;
+          if (dueDateStr) {
+            const derivedWeek = calculateGestationalWeekFromDueDate(dueDateStr);
+            setCurrentWeek(derivedWeek);
+          }
           setCurrentUser(profile);
         } else {
           const role = (session.user.user_metadata?.role as 'patient' | 'guardian') || 'patient';

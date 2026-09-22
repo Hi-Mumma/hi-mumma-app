@@ -1,15 +1,18 @@
 import React, { useState } from 'react';
-import { FetalDevelopmentWeek } from '../../types';
+import { FetalDevelopmentWeek, UserProfile } from '../../types';
+import { getPregnancyStageInfo } from '../../utils/pregnancyStage';
 
 interface MotherHeroBannerProps {
   currentWeek: number;
   weekInfo: FetalDevelopmentWeek;
+  currentUser?: UserProfile | null;
   onExploreJourney: () => void;
 }
 
 export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
   currentWeek,
   weekInfo,
+  currentUser,
   onExploreJourney
 }) => {
   const [tapHeart, setTapHeart] = useState(false);
@@ -28,19 +31,33 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
     setTimeout(() => setTapHeart(false), 2400);
   };
 
-  const getTrimester = (w: number) => {
-    if (w <= 12) {
-      return { num: 1, name: 'First Trimester', badgeBg: 'bg-[#FDF2F7]', badgeBorder: 'border-[#FBCFE8]', badgeText: 'text-[#DB2777]' };
+  const stageInfo = getPregnancyStageInfo(currentWeek);
+
+  const getBadgeStyle = (num: 1 | 2 | 3) => {
+    if (num === 1) {
+      return { badgeBg: 'bg-[#FDF2F7]', badgeBorder: 'border-[#FBCFE8]', badgeText: 'text-[#DB2777]' };
     }
-    if (w <= 24) {
-      return { num: 2, name: 'Second Trimester', badgeBg: 'bg-[#F0F9FF]', badgeBorder: 'border-[#BAE6FD]', badgeText: 'text-[#0284C7]' };
+    if (num === 2) {
+      return { badgeBg: 'bg-[#F0F9FF]', badgeBorder: 'border-[#BAE6FD]', badgeText: 'text-[#0284C7]' };
     }
-    return { num: 3, name: 'Third Trimester', badgeBg: 'bg-[#F5F3FF]', badgeBorder: 'border-[#DDD6FE]', badgeText: 'text-[#7C3AED]' };
+    return { badgeBg: 'bg-[#F5F3FF]', badgeBorder: 'border-[#DDD6FE]', badgeText: 'text-[#7C3AED]' };
   };
 
-  const trimester = getTrimester(currentWeek);
+  const badgeStyle = getBadgeStyle(stageInfo.trimesterNumber);
   const progressPercent = Math.min(100, Math.round((currentWeek / 40) * 100));
-  const daysLeft = Math.max(0, (40 - currentWeek) * 7);
+
+  const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
+  let daysLeft: number;
+  if (dueDateStr && dueDateStr.trim()) {
+    const due = new Date(dueDateStr.trim());
+    const today = new Date();
+    const diffMs = due.getTime() - today.getTime();
+    daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+  } else {
+    daysLeft = Math.max(0, (40 - currentWeek) * 7);
+  }
+
+  const displayName = currentUser?.name ? currentUser.name.split(' ')[0] : 'Mumma';
 
   return (
     <section className="relative isolate min-h-[430px] rounded-[36px] p-5 pb-8 sm:p-7 sm:pb-9 bg-gradient-to-br from-[#FFF5F8] via-white to-[#F0F7FF] border border-[#E2ECF7] shadow-[0_20px_50px_rgba(234,129,170,0.14)] overflow-hidden transition-all duration-500">
@@ -62,15 +79,15 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
               <span className="text-[11px] font-black uppercase tracking-widest text-[#EA81AA] bg-white/90 backdrop-blur-md px-3 py-1 rounded-full border border-[#FBCFE8] shadow-2xs">
                 Week {currentWeek} of 40
               </span>
-              <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border shadow-2xs ${trimester.badgeBg} ${trimester.badgeBorder} ${trimester.badgeText}`}>
-                {trimester.name}
+              <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border shadow-2xs ${badgeStyle.badgeBg} ${badgeStyle.badgeBorder} ${badgeStyle.badgeText}`}>
+                {stageInfo.trimesterName}
               </span>
             </div>
 
             {/* Maternal Headline */}
             <div className="pt-1">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#192231] flex items-center justify-center gap-2">
-                <span>Hello, Mumma!</span>
+                <span>Hello, {displayName}!</span>
                 <span className="text-xl sm:text-2xl animate-pulse">💗</span>
               </h1>
               {/* Daily Motivation & Maternal Reassurance */}

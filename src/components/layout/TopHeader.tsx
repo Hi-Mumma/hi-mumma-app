@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trimester, UserProfile } from '../../types';
 import { BrandLogo } from '../common/BrandLogo';
+import { getTrimesterNumber } from '../../utils/pregnancyStage';
 
 interface TopHeaderProps {
   week: number;
@@ -13,13 +14,13 @@ interface TopHeaderProps {
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
   week,
-  trimester,
   onWeekChange,
   currentUser,
   onOpenLogin,
   onLogout
 }) => {
-  const quickWeeks = [6, 8, 12, 16, 20, 24, 28, 32, 36, 40];
+  const allWeeks = Array.from({ length: 42 }, (_, i) => i + 1);
+  const canonicalTrimester = getTrimesterNumber(week);
 
   return (
     <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur-xl pt-2.5 pb-2.5 mb-3 border-b border-[#E8EFF7] flex items-center justify-between">
@@ -41,9 +42,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       {/* Week Selector Dropdown, Trimester Pill & Account Avatar */}
       <div className="flex items-center gap-1.5">
         <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-[#E2ECF7] shadow-xs">
-          <span className={`w-2 h-2 rounded-full ${trimester === 1 ? 'bg-[#EA81AA]' : trimester === 2 ? 'bg-[#6FAFED]' : 'bg-[#D8A657]'}`} />
+          <span
+            className={`w-2 h-2 rounded-full ${
+              canonicalTrimester === 1
+                ? 'bg-[#EA81AA]'
+                : canonicalTrimester === 2
+                ? 'bg-[#6FAFED]'
+                : 'bg-[#D8A657]'
+            }`}
+          />
           <span className="text-[10px] font-black uppercase tracking-wider text-[#5A677D]">
-            T{trimester}
+            T{canonicalTrimester}
           </span>
         </div>
 
@@ -55,9 +64,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             onChange={(e) => onWeekChange(Number(e.target.value))}
             className="bg-transparent text-xs font-black text-[#192231] py-0.5 focus:outline-none cursor-pointer"
           >
-            {quickWeeks.map((w) => (
+            {allWeeks.map((w) => (
               <option key={w} value={w}>
-                W{w} {w <= 12 ? '(T1)' : w <= 24 ? '(T2)' : '(T3)'}
+                W{w} (T{getTrimesterNumber(w)})
               </option>
             ))}
           </select>

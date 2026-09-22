@@ -149,6 +149,7 @@ export default function App() {
           weeklyBPCount={weeklyBPCount}
           daysLogged={daysLogged}
           onNavigate={(tab) => setCurrentTab(tab)}
+          currentUser={currentUser}
         />
       )}
 
