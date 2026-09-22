@@ -1,42 +1,30 @@
 import React, { useState } from 'react';
-import {
-  FetalDevelopmentWeek,
-  PregnancyTestTrackingEntry,
-  UltrasoundMilestoneTrackingEntry
-} from '../../types';
+import { FetalDevelopmentWeek } from '../../types';
 import { PregnancyVisualEvolution } from '../visualizer/PregnancyVisualEvolution';
 import { TrimesterRoadmap } from '../journey/TrimesterRoadmap';
-import { TestsAndUltrasoundSection } from '../medical/TestsAndUltrasoundSection';
+import { getPregnancyStageInfo } from '../../utils/pregnancyStage';
 
 interface JourneyViewProps {
   currentWeek: number;
   weekInfo: FetalDevelopmentWeek;
   onSelectWeek: (week: number) => void;
-  pregnancyTestTracking: PregnancyTestTrackingEntry[];
-  onTogglePregnancyTest: (id: string) => void;
-  ultrasoundMilestones: UltrasoundMilestoneTrackingEntry[];
-  onToggleUltrasoundMilestone: (id: string) => void;
 }
 
 export const JourneyView: React.FC<JourneyViewProps> = ({
   currentWeek,
   weekInfo,
-  onSelectWeek,
-  pregnancyTestTracking,
-  onTogglePregnancyTest,
-  ultrasoundMilestones,
-  onToggleUltrasoundMilestone
+  onSelectWeek
 }) => {
-  const [journeySection, setJourneySection] = useState<'visual' | 'roadmap' | 'scans'>('visual');
+  const [journeySection, setJourneySection] = useState<'visual' | 'roadmap'>('visual');
+  const stageInfo = getPregnancyStageInfo(currentWeek);
 
   return (
     <div className="space-y-4 pb-20">
       {/* View Mode Sub-Navigation Tabs */}
       <div className="flex items-center gap-1.5 p-1 bg-white border border-[#E8EFF7] rounded-2xl shadow-xs overflow-x-auto no-scrollbar">
         {[
-          { id: 'visual', label: '3D Fetal Evaluation', icon: '🧬' },
-          { id: 'roadmap', label: 'Pregnancy Roadmap', icon: '🗺️' },
-          { id: 'scans', label: 'Scans & Lab Panels', icon: '🩺' }
+          { id: 'visual', label: '3D Fetal Visualizer', icon: '🧬' },
+          { id: 'roadmap', label: 'Pregnancy Roadmap', icon: '🗺️' }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -67,7 +55,7 @@ export const JourneyView: React.FC<JourneyViewProps> = ({
               <div className="flex items-center gap-2">
                 <span className="text-sm">🌱</span>
                 <h3 className="text-xs font-black text-[#192231]">
-                  Week {currentWeek} Developmental Biology
+                  Week {currentWeek} Developmental Biology ({stageInfo.trimesterName})
                 </h3>
               </div>
               <span className="text-[10px] font-bold text-[#EA81AA] bg-[#FDF2F7] px-2 py-0.5 rounded-full border border-[#FCE7F3]">
@@ -94,16 +82,6 @@ export const JourneyView: React.FC<JourneyViewProps> = ({
         <TrimesterRoadmap
           currentWeek={currentWeek}
           onSelectWeek={onSelectWeek}
-        />
-      )}
-
-      {/* ── 3. TESTS & ULTRASOUNDS SECTION ── */}
-      {journeySection === 'scans' && (
-        <TestsAndUltrasoundSection
-          pregnancyTestTracking={pregnancyTestTracking}
-          onTogglePregnancyTest={onTogglePregnancyTest}
-          ultrasoundMilestones={ultrasoundMilestones}
-          onToggleUltrasoundMilestone={onToggleUltrasoundMilestone}
         />
       )}
     </div>

@@ -158,10 +158,6 @@ export default function App() {
           currentWeek={currentWeek}
           weekInfo={weekInfo}
           onSelectWeek={(w) => setCurrentWeek(w)}
-          pregnancyTestTracking={pregnancyTestTracking}
-          onTogglePregnancyTest={togglePregnancyTest}
-          ultrasoundMilestones={ultrasoundMilestones}
-          onToggleUltrasoundMilestone={toggleUltrasoundMilestone}
         />
       )}
 
@@ -179,6 +175,10 @@ export default function App() {
           onAddOBQuestion={addOBQuestion}
           bagItems={bagItems}
           onToggleBagItem={toggleBagItem}
+          pregnancyTestTracking={pregnancyTestTracking}
+          onTogglePregnancyTest={togglePregnancyTest}
+          ultrasoundMilestones={ultrasoundMilestones}
+          onToggleUltrasoundMilestone={toggleUltrasoundMilestone}
         />
       )}
 

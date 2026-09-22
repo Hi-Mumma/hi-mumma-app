@@ -5,10 +5,13 @@ import {
   WeekdayShort,
   FetalMovementEntry,
   PrenatalVisit,
-  ChecklistItem
+  ChecklistItem,
+  PregnancyTestTrackingEntry,
+  UltrasoundMilestoneTrackingEntry
 } from '../../types';
 import { BPLogWorkspace } from '../bp/BPLogWorkspace';
 import { BloodSugarWorkspace } from '../bloodsugar/BloodSugarWorkspace';
+import { TestsAndUltrasoundSection } from '../medical/TestsAndUltrasoundSection';
 
 interface TrackViewProps {
   bpEntries: BPLogEntry[];
@@ -23,6 +26,10 @@ interface TrackViewProps {
   onAddOBQuestion: (visitId: string, question: string) => void;
   bagItems: ChecklistItem[];
   onToggleBagItem: (id: string) => void;
+  pregnancyTestTracking: PregnancyTestTrackingEntry[];
+  onTogglePregnancyTest: (id: string) => void;
+  ultrasoundMilestones: UltrasoundMilestoneTrackingEntry[];
+  onToggleUltrasoundMilestone: (id: string) => void;
 }
 
 export const TrackView: React.FC<TrackViewProps> = ({
@@ -37,9 +44,13 @@ export const TrackView: React.FC<TrackViewProps> = ({
   visits,
   onAddOBQuestion,
   bagItems,
-  onToggleBagItem
+  onToggleBagItem,
+  pregnancyTestTracking,
+  onTogglePregnancyTest,
+  ultrasoundMilestones,
+  onToggleUltrasoundMilestone
 }) => {
-  const [activeSection, setActiveSection] = useState<'bp' | 'sugar' | 'kicks' | 'visits' | 'bag'>('bp');
+  const [activeSection, setActiveSection] = useState<'bp' | 'sugar' | 'scans' | 'kicks' | 'visits' | 'bag'>('bp');
 
   // Kick counter active session local state
   const [kickCount, setKickCount] = useState<number>(0);
@@ -82,6 +93,7 @@ export const TrackView: React.FC<TrackViewProps> = ({
         {[
           { id: 'bp', label: 'Blood Pressure', icon: '🩺' },
           { id: 'sugar', label: 'Blood Sugar', icon: '🩸' },
+          { id: 'scans', label: 'Tests & Scans', icon: '🔬' },
           { id: 'kicks', label: 'Kick Counter', icon: '🦶' },
           { id: 'visits', label: 'Doctor Prep', icon: '📋' },
           { id: 'bag', label: 'Hospital Bag', icon: '🧳' }
@@ -124,6 +136,16 @@ export const TrackView: React.FC<TrackViewProps> = ({
         <BloodSugarWorkspace
           entries={bloodSugarEntries}
           onAddLog={onAddBloodSugar}
+        />
+      )}
+
+      {/* ── 3. TESTS & ULTRASOUND SCANS GUIDE ── */}
+      {activeSection === 'scans' && (
+        <TestsAndUltrasoundSection
+          pregnancyTestTracking={pregnancyTestTracking}
+          onTogglePregnancyTest={onTogglePregnancyTest}
+          ultrasoundMilestones={ultrasoundMilestones}
+          onToggleUltrasoundMilestone={onToggleUltrasoundMilestone}
         />
       )}
 

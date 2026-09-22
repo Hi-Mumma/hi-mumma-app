@@ -38,7 +38,7 @@ export const PregnancyVisualEvolution: React.FC<PregnancyVisualEvolutionProps> =
         <div>
           <div className="flex items-center gap-2">
             <span className="text-sm sm:text-base font-black tracking-tight text-[#192231]">
-              3D Fetal Evaluation • Week {currentWeek}
+              3D Fetal Visualizer • Week {currentWeek}
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#8F9EB3]" />
             <span className="text-xs font-bold text-[#6FAFED]">

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getTrimesterNumber } from '../../utils/pregnancyStage';
 
 interface TrimesterRoadmapProps {
   currentWeek: number;
@@ -28,30 +29,14 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
   onSelectWeek
 }) => {
   const [expandedStage, setExpandedStage] = useState<string>(() => {
-    if (currentWeek <= 12) return 't1';
-    if (currentWeek <= 27) return 't2';
+    const trimester = getTrimesterNumber(currentWeek);
+    if (trimester === 1) return 't1';
+    if (trimester === 2) return 't2';
     if (currentWeek <= 40) return 't3';
     return 'delivery';
   });
 
   const stages: RoadmapStage[] = [
-    {
-      id: 'start',
-      phaseName: 'Start of Journey',
-      weekRange: 'Weeks 0–4',
-      subtitle: 'Conception & Implantation Genesis',
-      status: currentWeek >= 4 ? 'completed' : 'current',
-      accentColor: '#EA81AA',
-      bgGradient: 'from-[#FFF5F8] to-[#FFFFFF]',
-      borderColor: 'border-[#FBCFE8]',
-      badgeBg: 'bg-[#FDF2F7]',
-      badgeText: 'text-[#DB2777]',
-      icon: '✨',
-      keyMilestones: ['Blastocyst implantation', 'Cellular differentiation', 'Early hCG elevation'],
-      keyTests: ['Urine Pregnancy Test', 'Early Consultation'],
-      supplements: ['Folic Acid (400 mcg daily)'],
-      sampleWeek: 4
-    },
     {
       id: 't1',
       phaseName: 'First Trimester',
@@ -66,7 +51,7 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
       icon: '🌱',
       keyMilestones: ['Embryonic heart flicker detected', 'Neural tube closure', 'Tiny limb buds develop into fingers'],
       keyTests: ['First Ultrasound (Dating & Viability)', 'CBC & Blood Group/Rh', 'Thyroid (TSH)', 'Urine Routine'],
-      supplements: ['Folic Acid (mandatory)', 'Vitamin D & Prenatal Multivitamin'],
+      supplements: ['Folic Acid (as advised by doctor)', 'Vitamin D & Prenatal Multivitamin'],
       sampleWeek: 8
     },
     {
@@ -264,7 +249,7 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
                     {/* Supplements */}
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#8F9EB3] block">
-                        Prescribed Nutrition:
+                        Nutritional Guidance:
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {stage.supplements.map((s, i) => (

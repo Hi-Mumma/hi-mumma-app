@@ -59,7 +59,7 @@ export const TestsAndUltrasoundSection: React.FC<TestsAndUltrasoundSectionProps>
       title: 'Fourth Ultrasound: Late Gestation Growth & Wellbeing Scan',
       timing: 'Weeks 28–36',
       trimester: 3,
-      tag: 'Fourth Ultrasound (Required)',
+      tag: 'Fourth Ultrasound (Growth)',
       purpose: 'Evaluates fetal growth velocity, estimated fetal weight (EFW), amniotic fluid index (AFI), placental maturity, and umbilical artery Doppler blood flow patterns.',
       prep: 'Stay well hydrated. Non-invasive ultrasound assessing third-trimester vitality.',
       icon: '🌟',
