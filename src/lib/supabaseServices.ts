@@ -10,7 +10,8 @@ import {
   FetalMovementEntry,
   MedicalRecordItem,
   RecordFolderType,
-  MedicalTrackingStatus
+  MedicalTrackingStatus,
+  ChecklistItem
 } from '../types';
 
 export interface DatabaseProfile {
@@ -689,4 +690,126 @@ export async function addMedicalRecord(
     previewUrl: data.preview_url || undefined
   };
 }
+
+/* ====================================================================
+   PHASE 4: REMINDERS, DELIVERY & POSTPARTUM SERVICES
+   ==================================================================== */
+
+/**
+ * Fetch delivery preparation checklist items (Hospital Bag) for a patient
+ */
+export async function fetchDeliveryPrepItems(patientId: string): Promise<ChecklistItem[]> {
+  const { data, error } = await supabase
+    .from('delivery_prep_items')
+    .select('*')
+    .eq('patient_id', patientId);
+
+  if (error) {
+    console.error('Error fetching delivery prep items:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    id: row.item_id,
+    label: row.label,
+    completed: row.completed,
+    category: row.category as ChecklistItem['category']
+  }));
+}
+
+/**
+ * Upsert delivery preparation checklist item completion state
+ */
+export async function upsertDeliveryPrepItem(
+  patientId: string,
+  itemId: string,
+  label: string,
+  category: string,
+  completed: boolean
+) {
+  const { error } = await supabase
+    .from('delivery_prep_items')
+    .upsert(
+      {
+        patient_id: patientId,
+        item_id: itemId,
+        label,
+        category,
+        completed,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'patient_id,item_id' }
+    );
+
+  if (error) {
+    console.error('Error upserting delivery prep item:', error.message);
+  }
+}
+
+/**
+ * Fetch patient questions for prenatal visits
+ */
+export async function fetchPrenatalVisitQuestions(
+  patientId: string
+): Promise<{ visitId: string; questionText: string }[]> {
+  const { data, error } = await supabase
+    .from('prenatal_visit_questions')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching prenatal visit questions:', error.message);
+    return [];
+  }
+
+  return (data || []).map((row) => ({
+    visitId: row.visit_id,
+    questionText: row.question_text
+  }));
+}
+
+/**
+ * Add a question to a prenatal visit
+ */
+export async function addPrenatalVisitQuestion(
+  patientId: string,
+  visitId: string,
+  questionText: string
+) {
+  const { error } = await supabase
+    .from('prenatal_visit_questions')
+    .insert({
+      patient_id: patientId,
+      visit_id: visitId,
+      question_text: questionText
+    });
+
+  if (error) {
+    console.error('Error inserting prenatal visit question:', error.message);
+  }
+}
+
+/**
+ * Update patient postpartum journey phase and recovery day in profiles
+ */
+export async function updatePatientPostpartumState(
+  patientId: string,
+  phase: 'pregnancy' | 'postpartum',
+  postpartumDay: number
+) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      phase,
+      postpartum_day: postpartumDay,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', patientId);
+
+  if (error) {
+    console.error('Error updating patient postpartum state:', error.message);
+  }
+}
+
 

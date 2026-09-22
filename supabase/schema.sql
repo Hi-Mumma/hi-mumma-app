@@ -357,3 +357,52 @@ CREATE POLICY "Patients manage own medical records"
   USING (auth.uid() = patient_id)
   WITH CHECK (auth.uid() = patient_id);
 
+-- ====================================================================
+-- HI MUMMA - PHASE 4 REMINDERS, DELIVERY & POSTPARTUM TABLES & RLS
+-- ====================================================================
+
+-- 11. DELIVERY PREPARATION ITEMS TABLE (HOSPITAL BAG CHECKLIST)
+CREATE TABLE IF NOT EXISTS public.delivery_prep_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  item_id TEXT NOT NULL,
+  label TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('mum', 'partner', 'baby', 'documents')),
+  completed BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT unique_patient_prep_item UNIQUE (patient_id, item_id)
+);
+
+-- 12. PRENATAL VISIT QUESTIONS TABLE (OB-GYN QUESTION LEDGER)
+CREATE TABLE IF NOT EXISTS public.prenatal_visit_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  visit_id TEXT NOT NULL,
+  question_text TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- INDEXES FOR PERFORMANCE
+CREATE INDEX IF NOT EXISTS idx_delivery_prep_items_patient ON public.delivery_prep_items(patient_id);
+CREATE INDEX IF NOT EXISTS idx_prenatal_visit_questions_patient ON public.prenatal_visit_questions(patient_id);
+
+-- ENABLE ROW LEVEL SECURITY
+ALTER TABLE public.delivery_prep_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.prenatal_visit_questions ENABLE ROW LEVEL SECURITY;
+
+-- RLS POLICIES FOR DELIVERY PREPARATION ITEMS
+DROP POLICY IF EXISTS "Patients manage own delivery prep items" ON public.delivery_prep_items;
+CREATE POLICY "Patients manage own delivery prep items"
+  ON public.delivery_prep_items FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+-- RLS POLICIES FOR PRENATAL VISIT QUESTIONS
+DROP POLICY IF EXISTS "Patients manage own prenatal visit questions" ON public.prenatal_visit_questions;
+CREATE POLICY "Patients manage own prenatal visit questions"
+  ON public.prenatal_visit_questions FOR ALL
+  USING (auth.uid() = patient_id)
+  WITH CHECK (auth.uid() = patient_id);
+
+

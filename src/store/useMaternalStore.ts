@@ -35,7 +35,12 @@ import {
   fetchFetalMovementLogs,
   addFetalMovementLog,
   fetchMedicalRecords,
-  addMedicalRecord
+  addMedicalRecord,
+  fetchDeliveryPrepItems,
+  upsertDeliveryPrepItem,
+  fetchPrenatalVisitQuestions,
+  addPrenatalVisitQuestion,
+  updatePatientPostpartumState
 } from '../lib/supabaseServices';
 import { calculateGestationalWeekFromDueDate } from '../utils/pregnancyStage';
 
@@ -338,7 +343,21 @@ export const useMaternalStore = () => {
     }
   };
 
-  // Fetch & Sync Phase 3 Care Data from Supabase when user logs in
+  const handleSetPhase = (newPhase: PregnancyPhase) => {
+    setPhase(newPhase);
+    if (currentUser?.id && isSupabaseConfigured) {
+      updatePatientPostpartumState(currentUser.id, newPhase, postpartumDay);
+    }
+  };
+
+  const handleSetPostpartumDay = (newDay: number) => {
+    setPostpartumDay(newDay);
+    if (currentUser?.id && isSupabaseConfigured) {
+      updatePatientPostpartumState(currentUser.id, phase, newDay);
+    }
+  };
+
+  // Fetch & Sync Phase 3 Care & Phase 4 Reminders/Delivery Data from Supabase when user logs in
   useEffect(() => {
     let active = true;
 
@@ -346,12 +365,22 @@ export const useMaternalStore = () => {
       if (!isSupabaseConfigured) return;
 
       try {
-        const [dbTests, dbUltrasounds, dbSupplements, dbMovements, dbRecords] = await Promise.all([
+        const [
+          dbTests,
+          dbUltrasounds,
+          dbSupplements,
+          dbMovements,
+          dbRecords,
+          dbPrepItems,
+          dbVisitQuestions
+        ] = await Promise.all([
           fetchPregnancyTestRecords(userId),
           fetchUltrasoundMilestonesRecords(userId),
           fetchDailySupplementLog(userId),
           fetchFetalMovementLogs(userId),
-          fetchMedicalRecords(userId)
+          fetchMedicalRecords(userId),
+          fetchDeliveryPrepItems(userId),
+          fetchPrenatalVisitQuestions(userId)
         ]);
 
         if (!active) return;
@@ -385,8 +414,32 @@ export const useMaternalStore = () => {
         if (dbRecords.length > 0) {
           setRecords(dbRecords);
         }
+
+        if (dbPrepItems.length > 0) {
+          setBagItems((prev) =>
+            prev.map((item) => {
+              const match = dbPrepItems.find((p) => p.id === item.id);
+              return match ? { ...item, completed: match.completed } : item;
+            })
+          );
+        }
+
+        if (dbVisitQuestions.length > 0) {
+          setVisits((prev) =>
+            prev.map((visit) => {
+              const questionsForVisit = dbVisitQuestions
+                .filter((q) => q.visitId === visit.id)
+                .map((q) => q.questionText);
+              if (questionsForVisit.length > 0) {
+                const combined = Array.from(new Set([...visit.doctorQuestions, ...questionsForVisit]));
+                return { ...visit, doctorQuestions: combined };
+              }
+              return visit;
+            })
+          );
+        }
       } catch (err) {
-        console.error('Error syncing Phase 3 Care data from Supabase:', err);
+        console.error('Error syncing Care & Delivery data from Supabase:', err);
       }
     }
 
@@ -399,28 +452,42 @@ export const useMaternalStore = () => {
     };
   }, [currentUser?.id]);
 
-
-  // Clinical Visits & OB-GYN Questions (Phase 1 local, migrated in Phase 2)
+  // Clinical Visits & OB-GYN Questions (Phase 1 local, persisted in Phase 4)
   const [visits, setVisits] = useState<PrenatalVisit[]>(initialVisits);
 
   const addOBQuestion = (visitId: string, questionText: string) => {
     if (!questionText.trim()) return;
+    const cleanText = questionText.trim();
     setVisits((prev) =>
       prev.map((v) =>
         v.id === visitId
-          ? { ...v, doctorQuestions: [...v.doctorQuestions, questionText.trim()] }
+          ? { ...v, doctorQuestions: [...v.doctorQuestions, cleanText] }
           : v
       )
     );
+
+    if (currentUser?.id && isSupabaseConfigured) {
+      addPrenatalVisitQuestion(currentUser.id, visitId, cleanText);
+    }
   };
 
-  // Hospital Packing List (Phase 1 local, migrated in Phase 2)
+  // Hospital Packing List / Delivery Prep Items (Phase 1 local, persisted in Phase 4)
   const [bagItems, setBagItems] = useState<ChecklistItem[]>(initialHospitalBag);
 
   const toggleBagItem = (id: string) => {
-    setBagItems((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, completed: !item.completed } : item))
-    );
+    setBagItems((prev) => {
+      const updated = prev.map((item) => {
+        if (item.id === id) {
+          const nextCompleted = !item.completed;
+          if (currentUser?.id && isSupabaseConfigured) {
+            upsertDeliveryPrepItem(currentUser.id, item.id, item.label, item.category, nextCompleted);
+          }
+          return { ...item, completed: nextCompleted };
+        }
+        return item;
+      });
+      return updated;
+    });
   };
 
   // Week info helper
@@ -436,9 +503,9 @@ export const useMaternalStore = () => {
     currentWeek,
     setCurrentWeek,
     phase,
-    setPhase,
+    setPhase: handleSetPhase,
     postpartumDay,
-    setPostpartumDay,
+    setPostpartumDay: handleSetPostpartumDay,
     weekInfo,
     supplements,
     toggleSupplement,
