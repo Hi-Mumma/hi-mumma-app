@@ -33,10 +33,18 @@ loadEnvVariables();
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
-// CORS middleware allowing local Vite development origins
+// CORS middleware allowing local Vite development origins and production client origins
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin && (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1'))) {
+  const clientUrl = (process.env.CLIENT_URL || '').trim().replace(/\/+$/, '');
+  const isAllowedOrigin = origin && (
+    origin.startsWith('http://localhost') ||
+    origin.startsWith('http://127.0.0.1') ||
+    origin.endsWith('.vercel.app') ||
+    (clientUrl && (origin === clientUrl || origin.startsWith(clientUrl)))
+  );
+
+  if (isAllowedOrigin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -296,7 +304,7 @@ app.post('/api/ai', async (req: Request, res: Response) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`[Hi Mumma Gemini Backend] Server running on http://localhost:${PORT}`);
+const PORT = Number(process.env.PORT) || 3001;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Hi Mumma Gemini Backend] Server running on port ${PORT} (0.0.0.0)`);
 });
