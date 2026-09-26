@@ -21,26 +21,23 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 z-40 pointer-events-none">
-      {/* ── FLOATING "MY RECORDS" FOLDER BUTTON (BOTTOM-RIGHT CORNER, ICON ONLY) ── */}
-      <div className="flex justify-end pr-1 mb-3 pointer-events-auto">
+    <div className="fixed bottom-0 left-0 right-0 max-w-[430px] mx-auto px-4 pb-3 pt-1 z-40 pointer-events-none">
+      {/* ── FLOATING "MY RECORDS" FOLDER BUTTON (BOTTOM-RIGHT CORNER) ── */}
+      <div className="flex justify-end pr-1 mb-2 pointer-events-auto">
         <button
           onClick={() => onSelectTab('records')}
           aria-label="Open Medical Records"
           title="My Records"
-          className={`group relative w-13 h-13 rounded-full border flex items-center justify-center transition-all duration-300 active:scale-90 hover:scale-108 hover:-translate-y-1 animate-float-vault cursor-pointer ${
+          className={`group relative w-11 h-11 rounded-full border flex items-center justify-center transition-all duration-200 active:scale-95 hover:scale-105 cursor-pointer shadow-md ${
             currentTab === 'records'
-              ? 'bg-gradient-to-tr from-[#EA81AA] to-[#6FAFED] text-white border-white/60 shadow-[0_12px_28px_rgba(234,129,170,0.45)]'
-              : 'bg-white/95 backdrop-blur-2xl border-[#E2ECF7] text-[#192231] shadow-[0_10px_28px_rgba(111,175,237,0.3)] hover:border-[#EA81AA]'
+              ? 'bg-gradient-to-tr from-[#EA81AA] to-[#6FAFED] text-white border-white'
+              : 'bg-white/95 backdrop-blur-xl border-[#E2ECF7] text-[#192231] hover:border-[#EA81AA]'
           }`}
         >
-          {/* Subtle Ambient Pink & Blue Aura Glow */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#FCE7F3] via-white to-[#E0F2FE] -z-10 opacity-80 blur-md group-hover:opacity-100 transition-opacity" />
-
-          {/* Folder / File Icon */}
+          {/* Folder Icon */}
           <div className="relative flex items-center justify-center">
             <svg
-              className={`w-6 h-6 transition-transform duration-300 group-hover:scale-110 ${
+              className={`w-5 h-5 transition-transform duration-200 ${
                 currentTab === 'records' ? 'text-white' : 'text-[#38BDF8]'
               }`}
               viewBox="0 0 24 24"
@@ -50,29 +47,29 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
             </svg>
 
             {/* Pink Status Dot Notification */}
-            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 rounded-full bg-[#EA81AA] border-2 border-white shadow-xs animate-pulse" />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[#EA81AA] border-2 border-white shadow-xs" />
           </div>
         </button>
       </div>
 
       {/* ── PRIMARY 5-TAB BOTTOM NAVIGATION BAR ── */}
-      <nav className="pointer-events-auto bg-white/90 backdrop-blur-2xl border border-white/80 rounded-[32px] p-1.5 flex justify-around items-center shadow-[0_12px_36px_rgba(25,34,49,0.08)]">
+      <nav className="pointer-events-auto bg-white/95 backdrop-blur-xl border border-white/80 rounded-full p-1.5 flex justify-around items-center shadow-[0_8px_30px_rgba(25,34,49,0.08)]">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => onSelectTab(tab.id)}
-              className={`flex flex-col items-center justify-center py-2 px-3 rounded-[24px] transition-all duration-300 ${
+              className={`flex-1 flex flex-col items-center justify-center py-1.5 px-2 rounded-full transition-all duration-200 ${
                 isActive
-                  ? 'bg-gradient-to-tr from-[#FDF5F8] via-white to-[#F3F8FE] text-[#192231] border border-[#E2ECF7] shadow-xs'
+                  ? 'bg-[#192231] text-white shadow-xs'
                   : 'text-[#8F9EB3] hover:text-[#5A677D]'
               }`}
             >
-              <span className={`text-base leading-none transition-transform duration-300 ${isActive ? 'scale-110' : 'opacity-70'}`}>
+              <span className={`text-base leading-none transition-transform duration-200 ${isActive ? 'scale-110 text-white' : 'opacity-80'}`}>
                 {tab.icon}
               </span>
-              <span className="text-[10px] font-bold tracking-tight mt-1">
+              <span className="text-[10px] font-bold tracking-tight mt-0.5">
                 {tab.label}
               </span>
             </button>

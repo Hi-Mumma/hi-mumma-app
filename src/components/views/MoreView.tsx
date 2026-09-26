@@ -56,8 +56,8 @@ export const MoreView: React.FC<MoreViewProps> = ({
         </div>
 
         {currentUser ? (
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#F8FAFD] border border-[#E8EFF7]">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3.5 rounded-2xl bg-[#F8FAFD] border border-[#E8EFF7] gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className="w-10 h-10 rounded-2xl overflow-hidden border border-white shadow-xs shrink-0">
                 <img
                   src={currentUser.avatarUrl || '/mother-hero.jpg'}
@@ -65,10 +65,10 @@ export const MoreView: React.FC<MoreViewProps> = ({
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-1.5">
-                  <h4 className="text-xs font-black text-[#192231]">{currentUser.name}</h4>
-                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase border ${
+              <div className="space-y-0.5 min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h4 className="text-xs font-black text-[#192231] truncate">{currentUser.name}</h4>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded-md uppercase border shrink-0 ${
                     currentUser.role === 'guardian'
                       ? 'bg-[#EFF6FF] border-[#BFDBFE] text-[#2563EB]'
                       : 'bg-[#FFF5F8] border-[#FBCFE8] text-[#EA81AA]'
@@ -76,28 +76,28 @@ export const MoreView: React.FC<MoreViewProps> = ({
                     {currentUser.role === 'guardian' ? 'Guardian' : 'Mother'}
                   </span>
                 </div>
-                <p className="text-[10px] text-[#7A8B9E]">{currentUser.email}</p>
+                <p className="text-[10px] text-[#7A8B9E] break-words">{currentUser.email}</p>
                 {currentUser.role === 'patient' && currentUser.dueDate && (
-                  <p className="text-[9px] text-[#5A677D]">Due: {currentUser.dueDate}</p>
+                  <p className="text-[9px] text-[#5A677D] truncate">Due: {currentUser.dueDate}</p>
                 )}
                 {currentUser.role === 'guardian' && currentUser.guardianProfile && (
-                  <p className="text-[9px] text-[#5A677D]">
+                  <p className="text-[9px] text-[#5A677D] break-words">
                     Supporting: {currentUser.guardianProfile.connectedPatientName} ({currentUser.guardianProfile.relationship})
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex flex-col min-[340px]:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t border-[#E8EFF7]/60 sm:border-t-0">
               <button
                 onClick={onOpenLogin}
-                className="px-2.5 py-1 rounded-xl bg-white border border-[#E2ECF7] text-[10px] font-bold text-[#192231] hover:bg-[#F3F8FE] transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none px-3 py-2 min-h-[44px] rounded-xl bg-white border border-[#E2ECF7] text-[11px] font-bold text-[#192231] hover:bg-[#F3F8FE] transition-colors cursor-pointer flex items-center justify-center"
               >
                 Switch Role
               </button>
               <button
                 onClick={onLogout}
-                className="px-2.5 py-1 rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[10px] font-bold text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none px-3 py-2 min-h-[44px] rounded-xl bg-[#FEF2F2] border border-[#FECACA] text-[11px] font-bold text-[#DC2626] hover:bg-[#FEE2E2] transition-colors cursor-pointer flex items-center justify-center"
               >
                 Sign Out
               </button>
@@ -184,7 +184,7 @@ export const MoreView: React.FC<MoreViewProps> = ({
                       Granted Permissions:
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                       {[
                         { key: 'allowJourneyView', label: '🗺️ Gestational Progress' },
                         { key: 'allowCareView', label: '🥗 Supplement Summary' },
@@ -195,9 +195,9 @@ export const MoreView: React.FC<MoreViewProps> = ({
                       ].map((perm) => (
                         <label
                           key={perm.key}
-                          className="flex items-center justify-between p-2 rounded-xl bg-white border border-[#E8EFF7] cursor-pointer hover:border-[#6FAFED] transition-colors"
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-[#E8EFF7] cursor-pointer hover:border-[#6FAFED] transition-colors"
                         >
-                          <span className="text-[11px] font-bold text-[#192231]">
+                          <span className="text-xs font-bold text-[#192231]">
                             {perm.label}
                           </span>
                           <input
@@ -209,7 +209,7 @@ export const MoreView: React.FC<MoreViewProps> = ({
                                 [perm.key]: e.target.checked
                               })
                             }
-                            className="accent-[#EA81AA] w-3.5 h-3.5 cursor-pointer"
+                            className="accent-[#EA81AA] w-4 h-4 cursor-pointer shrink-0 ml-2"
                           />
                         </label>
                       ))}

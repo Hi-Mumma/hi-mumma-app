@@ -23,7 +23,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   const canonicalTrimester = getTrimesterNumber(week);
 
   return (
-    <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur-xl pt-2.5 pb-2.5 mb-3 border-b border-[#E8EFF7] flex items-center justify-between">
+    <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur-xl py-2 mb-3 border-b border-[#E8EFF7] flex items-center justify-between">
       <div className="flex items-center gap-2">
         <BrandLogo size="sm" />
         {currentUser && (
@@ -40,8 +40,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       </div>
 
       {/* Week Selector Dropdown, Trimester Pill & Account Avatar */}
-      <div className="flex items-center gap-1.5">
-        <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-[#E2ECF7] shadow-xs">
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E2ECF7] shadow-xs">
           <span
             className={`w-2 h-2 rounded-full ${
               canonicalTrimester === 1
@@ -56,17 +56,17 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center bg-white border border-[#E2ECF7] rounded-full shadow-xs px-2 py-0.5">
+        <div className="flex items-center bg-white border border-[#E2ECF7] rounded-full shadow-xs px-2.5 py-1">
           <span className="text-[10px] font-bold text-[#8F9EB3] mr-1">Week</span>
           <select
             aria-label="Select Gestational Week"
             value={week}
             onChange={(e) => onWeekChange(Number(e.target.value))}
-            className="bg-transparent text-xs font-black text-[#192231] py-0.5 focus:outline-none cursor-pointer"
+            className="bg-transparent text-xs font-black text-[#192231] focus:outline-none cursor-pointer"
           >
             {allWeeks.map((w) => (
               <option key={w} value={w}>
-                W{w} (T{getTrimesterNumber(w)})
+                W{w}
               </option>
             ))}
           </select>
@@ -78,7 +78,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             <button
               onClick={onOpenLogin}
               title={currentUser ? `Signed in as ${currentUser.name} (${currentUser.role}). Click to switch role.` : 'Sign In'}
-              className="w-7 h-7 rounded-full overflow-hidden border border-[#E2ECF7] hover:border-[#EA81AA] shadow-2xs transition-all cursor-pointer flex items-center justify-center shrink-0 bg-white"
+              className="w-8 h-8 rounded-full overflow-hidden border border-[#E2ECF7] hover:border-[#EA81AA] shadow-2xs transition-all cursor-pointer flex items-center justify-center shrink-0 bg-white"
             >
               {currentUser?.avatarUrl ? (
                 <img

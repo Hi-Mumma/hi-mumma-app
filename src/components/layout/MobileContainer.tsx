@@ -40,11 +40,8 @@ export const MobileContainer: React.FC<MobileContainerProps> = ({ children }) =>
             : 'max-w-2xl min-h-screen shadow-lg'
         }`}
       >
-        {/* Subtle interior frosted status band */}
-        <div className="h-1.5 w-full bg-gradient-to-r from-[#FDE8F0]/60 via-white to-[#E4EFFC]/60" />
-
         {/* Scrollable Viewport */}
-        <div className="flex-1 overflow-y-auto px-4 pb-36 pt-1 no-scrollbar">
+        <div className="flex-1 overflow-y-auto px-4 pb-32 pt-2 no-scrollbar">
           {children}
         </div>
       </main>

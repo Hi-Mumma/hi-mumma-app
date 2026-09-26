@@ -159,42 +159,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onDismiss 
 
   return (
     <div className="space-y-4 pb-20">
-      <section className="relative rounded-[36px] p-5 sm:p-6 bg-gradient-to-br from-[#FFF5F8] via-white to-[#F0F7FF] border border-[#E2ECF7] shadow-[0_16px_40px_rgba(234,129,170,0.12)] overflow-hidden">
-        <div className="absolute -top-12 -left-12 w-52 h-52 rounded-full bg-[#FCE7F3] blur-3xl opacity-75 pointer-events-none" />
-        <div className="absolute -bottom-12 -right-12 w-56 h-56 rounded-full bg-[#E0F2FE] blur-3xl opacity-80 pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-          <div className="relative shrink-0">
-            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-3xl overflow-hidden border-2 border-white shadow-[0_12px_32px_rgba(234,129,170,0.25)] bg-gradient-to-tr from-[#FDF2F7] to-[#E0F2FE] animate-hero-reveal">
-              <img
-                src="/mother-hero.jpg"
-                alt="HI MUMMA Maternal Hero"
-                className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/logo.png';
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-white/10 pointer-events-none" />
-            </div>
-
-            <div className="absolute -bottom-2 -right-2 px-2.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-[#FBCFE8] shadow-xs flex items-center gap-1.5">
-              <Heart className="w-3 h-3 text-[#EA81AA] fill-[#EA81AA]" />
-              <span className="text-[10px] font-black text-[#192231] tracking-wide">
-                HI MUMMA
-              </span>
-            </div>
+      <section className="relative rounded-[32px] p-4 bg-gradient-to-br from-[#FFF5F8] via-white to-[#F0F7FF] border border-[#E2ECF7] shadow-xs overflow-hidden">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl overflow-hidden border border-white shadow-xs shrink-0 bg-[#FDF2F7]">
+            <img
+              src="/mother-hero.jpg"
+              alt="HI MUMMA Maternal Hero"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/logo.png';
+              }}
+            />
           </div>
 
-          <div className="text-center sm:text-left space-y-1">
-            <span className="px-3 py-0.5 rounded-full bg-white border border-[#FBCFE8] text-[10px] font-black uppercase tracking-wider text-[#EA81AA] inline-block shadow-2xs">
-              Welcome to Your Sanctuary
+          <div className="space-y-0.5 min-w-0">
+            <span className="px-2 py-0.5 rounded-full bg-white border border-[#FBCFE8] text-[9px] font-extrabold uppercase text-[#EA81AA]">
+              Welcome to Sanctuary
             </span>
-            <h2 className="text-xl sm:text-2xl font-black text-[#192231] tracking-tight leading-tight">
+            <h2 className="text-base font-black text-[#192231] tracking-tight">
               {isSignUp ? 'Begin Your Journey' : 'Welcome Back, Mumma'}
             </h2>
-            <p className="text-xs text-[#5A677D] leading-relaxed max-w-sm">
-              Your personalized maternal companion for 3D fetal evaluation, daily vitals tracking, and private medical records.
-            </p>
           </div>
         </div>
       </section>

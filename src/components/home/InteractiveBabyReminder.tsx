@@ -382,7 +382,7 @@ export const InteractiveBabyReminder: React.FC<InteractiveBabyReminderProps> = (
               </div>
 
               <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black transition-all ${
+                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black transition-all shrink-0 ${
                   item.checked
                     ? 'bg-[#EA81AA] text-white shadow-xs'
                     : 'border-2 border-[#CBD5E1] text-transparent hover:border-[#6FAFED]'
@@ -392,45 +392,6 @@ export const InteractiveBabyReminder: React.FC<InteractiveBabyReminderProps> = (
               </span>
             </button>
           ))}
-        </div>
-      </div>
-
-      {/* Character State Preview Switcher */}
-      <div className="mt-3 pt-2 border-t border-[#F0F4FA] flex items-center justify-between text-[9px] text-[#8F9EB3]">
-        <span>Baby Character Preview:</span>
-        <div className="flex gap-1">
-          <button
-            onClick={() => setManualState('happy')}
-            className={`px-2 py-0.5 rounded-md transition-colors ${
-              manualState === 'happy' ? 'bg-[#FCE7F3] text-[#DB2777] font-bold' : 'hover:text-[#192231]'
-            }`}
-          >
-            Happy
-          </button>
-          <button
-            onClick={() => setManualState('approaching')}
-            className={`px-2 py-0.5 rounded-md transition-colors ${
-              manualState === 'approaching' ? 'bg-[#FEF3C7] text-[#D97706] font-bold' : 'hover:text-[#192231]'
-            }`}
-          >
-            Approaching
-          </button>
-          <button
-            onClick={() => setManualState('overdue')}
-            className={`px-2 py-0.5 rounded-md transition-colors ${
-              manualState === 'overdue' ? 'bg-[#FEE2E2] text-[#DC2626] font-bold' : 'hover:text-[#192231]'
-            }`}
-          >
-            Overdue
-          </button>
-          <button
-            onClick={() => setManualState('auto')}
-            className={`px-2 py-0.5 rounded-md transition-colors ${
-              manualState === 'auto' ? 'bg-[#E0F2FE] text-[#0284C7] font-bold' : 'hover:text-[#192231]'
-            }`}
-          >
-            Auto
-          </button>
         </div>
       </div>
     </section>
