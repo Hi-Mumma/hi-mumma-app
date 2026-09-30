@@ -3,6 +3,7 @@ import { Trimester, UserProfile } from '../../types';
 import { BrandLogo } from '../common/BrandLogo';
 import {
   getTrimesterNumber,
+  getPregnancyStageInfo,
   calculateGestationalAgeFromDueDate,
   GestationalAge
 } from '../../utils/pregnancyStage';
@@ -11,7 +12,7 @@ interface TopHeaderProps {
   week: number;
   currentDays?: number;
   gestationalAge?: GestationalAge;
-  trimester: Trimester;
+  trimester?: Trimester;
   onWeekChange: (week: number) => void;
   currentUser?: UserProfile | null;
   onOpenLogin?: () => void;
@@ -28,70 +29,44 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   onLogout
 }) => {
   const allWeeks = Array.from({ length: 42 }, (_, i) => i + 1);
-  const canonicalTrimester = getTrimesterNumber(week);
-
-  const pog = gestationalAge || calculateGestationalAgeFromDueDate(
-    currentUser?.dueDate || currentUser?.patientProfile?.dueDate,
+  const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
+  
+  // Calculate mother's actual EDD-derived gestational age
+  const actualPog = calculateGestationalAgeFromDueDate(
+    dueDateStr,
     week,
     currentDays
   );
 
+  const displayPog = gestationalAge || actualPog;
+  const isExploring = actualPog.hasValidDate && week !== actualPog.weeks;
+
+  const activeTrimester = getTrimesterNumber(week);
+  const activeStageInfo = getPregnancyStageInfo(week);
+
   return (
-    <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur-xl py-2 mb-3 border-b border-[#E8EFF7] flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <BrandLogo size="sm" />
-        {currentUser && (
-          <span
-            className={`hidden sm:inline-block text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
-              currentUser.role === 'guardian'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]'
-                : 'bg-[#FFF5F8] text-[#EA81AA] border-[#FBCFE8]'
-            }`}
-          >
-            {currentUser.role === 'guardian' ? 'Guardian' : 'Mother'}
-          </span>
-        )}
-      </div>
-
-      {/* Week Selector Dropdown, Trimester Pill & Account Avatar */}
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white border border-[#E2ECF7] shadow-xs">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              canonicalTrimester === 1
-                ? 'bg-[#EA81AA]'
-                : canonicalTrimester === 2
-                ? 'bg-[#6FAFED]'
-                : 'bg-[#D8A657]'
-            }`}
-          />
-          <span className="text-[10px] font-black uppercase tracking-wider text-[#5A677D]">
-            T{canonicalTrimester}
-          </span>
+    <header className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur-xl mb-3 border-b border-[#E8EFF7] shadow-2xs divide-y divide-[#E8EFF7]/60">
+      {/* ── ROW 1: Clean, Minimal Main Navbar ── */}
+      <div className="py-2 px-3 flex items-center justify-between gap-2">
+        {/* Left: App Brand Logo & Role Badge */}
+        <div className="flex items-center gap-2 min-w-0">
+          <BrandLogo size="sm" hideSubtext />
+          {currentUser && (
+            <span
+              className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border shrink-0 ${
+                currentUser.role === 'guardian'
+                  ? 'bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]'
+                  : 'bg-[#FFF5F8] text-[#EA81AA] border-[#FBCFE8]'
+              }`}
+            >
+              {currentUser.role === 'guardian' ? 'Guardian' : 'Mother'}
+            </span>
+          )}
         </div>
 
-        <div className="flex items-center bg-white border border-[#E2ECF7] rounded-full shadow-xs px-2.5 py-1">
-          <span className="text-[10px] font-bold text-[#8F9EB3] mr-1">Week</span>
-          <select
-            aria-label="Select Gestational Week"
-            value={week}
-            onChange={(e) => onWeekChange(Number(e.target.value))}
-            className="bg-transparent text-xs font-black text-[#192231] focus:outline-none cursor-pointer"
-          >
-            {allWeeks.map((w) => (
-              <option key={w} value={w}>
-                W{w}
-              </option>
-            ))}
-          </select>
-          <span className="text-[10px] font-black text-[#EA81AA] ml-1.5 border-l border-[#E2ECF7] pl-1.5">
-            {pog.formattedShort}
-          </span>
-        </div>
-
-        {/* User Account Avatar & Switch / Sign Out Button */}
+        {/* Right: Account Avatar & Auth Controls */}
         {onOpenLogin && (
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={onOpenLogin}
               title={currentUser ? `Signed in as ${currentUser.name} (${currentUser.role}). Click to switch role.` : 'Sign In'}
@@ -121,7 +96,49 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         )}
       </div>
-    </div>
+
+      {/* ── ROW 2: Dedicated Pregnancy Information Bar ── */}
+      <div className="py-1.5 px-3 bg-[#FAFBFD]/90 flex items-center justify-between gap-2 text-xs overflow-x-auto no-scrollbar">
+        {/* Left: Trimester / Viewing Badge & Actual POG Gestational Age */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-[#E2ECF7] shadow-2xs">
+            <span
+              className={`w-2 h-2 rounded-full shrink-0 ${
+                activeTrimester === 1
+                  ? 'bg-[#EA81AA]'
+                  : activeTrimester === 2
+                  ? 'bg-[#6FAFED]'
+                  : 'bg-[#D8A657]'
+              }`}
+            />
+            <span className="text-[10px] font-black uppercase tracking-wider text-[#5A677D]">
+              {isExploring ? `Viewing W${week}` : activeStageInfo.trimesterName}
+            </span>
+          </div>
+
+          <span className="text-[11px] font-extrabold text-[#192231] bg-[#FDF2F7] px-2.5 py-0.5 rounded-full border border-[#FBCFE8] shadow-2xs whitespace-nowrap">
+            {isExploring ? `POG: ${actualPog.formattedLong}` : displayPog.formattedLong}
+          </span>
+        </div>
+
+        {/* Right: Preserved & Fully Functional Week Selector Dropdown */}
+        <div className="flex items-center gap-1 bg-white border border-[#E2ECF7] rounded-full shadow-2xs px-2.5 py-0.5 shrink-0">
+          <span className="text-[10px] font-bold text-[#8F9EB3]">Week</span>
+          <select
+            aria-label="Select Gestational Week"
+            value={week}
+            onChange={(e) => onWeekChange(Number(e.target.value))}
+            className="bg-transparent text-xs font-black text-[#192231] focus:outline-none cursor-pointer pr-0.5"
+          >
+            {allWeeks.map((w) => (
+              <option key={w} value={w}>
+                W{w}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </header>
   );
 };
 

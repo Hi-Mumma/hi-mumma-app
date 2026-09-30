@@ -3,12 +3,14 @@ import React from 'react';
 interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg';
   showTagline?: boolean;
+  hideSubtext?: boolean;
   className?: string;
 }
 
 export const BrandLogo: React.FC<BrandLogoProps> = ({
   size = 'md',
   showTagline = false,
+  hideSubtext = false,
   className = ''
 }) => {
   const iconDimensions = {
@@ -48,15 +50,17 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
           </span>
           <span className="text-[9px] font-bold text-[#EA81AA] -mt-2">™</span>
         </div>
-        {showTagline ? (
-          <p className="text-[10px] font-medium text-[#7A8B9E] tracking-tight mt-0.5 flex items-center gap-1">
-            <span>A healthier tomorrow, together</span>
-            <span className="text-[#EA81AA] text-[9px]">💗</span>
-          </p>
-        ) : (
-          <p className="text-[10px] font-medium text-[#8F9EB3]">
-            Maternal Journey Companion
-          </p>
+        {!hideSubtext && (
+          showTagline ? (
+            <p className="text-[10px] font-medium text-[#7A8B9E] tracking-tight mt-0.5 flex items-center gap-1">
+              <span>A healthier tomorrow, together</span>
+              <span className="text-[#EA81AA] text-[9px]">💗</span>
+            </p>
+          ) : (
+            <p className="text-[10px] font-medium text-[#8F9EB3]">
+              Maternal Journey Companion
+            </p>
+          )
         )}
       </div>
     </div>
