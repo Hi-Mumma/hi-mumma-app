@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FetalDevelopmentWeek, UserProfile } from '../../types';
 import {
+  getPregnancyStageInfo,
   calculateGestationalAgeFromDueDate,
   GestationalAge
 } from '../../utils/pregnancyStage';
@@ -44,6 +45,19 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
     currentDays
   );
 
+  const stageInfo = getPregnancyStageInfo(pog.weeks);
+
+  const getBadgeStyle = (num: 1 | 2 | 3) => {
+    if (num === 1) {
+      return { badgeBg: 'bg-[#FDF2F7]', badgeBorder: 'border-[#FBCFE8]', badgeText: 'text-[#DB2777]' };
+    }
+    if (num === 2) {
+      return { badgeBg: 'bg-[#F0F9FF]', badgeBorder: 'border-[#BAE6FD]', badgeText: 'text-[#0284C7]' };
+    }
+    return { badgeBg: 'bg-[#F5F3FF]', badgeBorder: 'border-[#DDD6FE]', badgeText: 'text-[#7C3AED]' };
+  };
+
+  const badgeStyle = getBadgeStyle(stageInfo.trimesterNumber);
   const progressPercent = Math.min(100, Math.round(((pog.weeks * 7 + pog.days) / 280) * 100));
 
   const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
@@ -68,6 +82,16 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
       <div className="absolute -bottom-16 -right-16 z-0 w-48 h-48 rounded-full bg-[#E0F2FE] blur-3xl opacity-60 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col items-center gap-4 text-center">
+        {/* Gestational POG & Trimester Badges */}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-[#EA81AA] bg-white px-3 py-1 rounded-full border border-[#FBCFE8] shadow-2xs">
+            {pog.formattedLong}
+          </span>
+          <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border shadow-2xs ${badgeStyle.badgeBg} ${badgeStyle.badgeBorder} ${badgeStyle.badgeText}`}>
+            {stageInfo.trimesterName}
+          </span>
+        </div>
+
         {/* Maternal Headline */}
         <div>
           <h1 className="text-2xl font-black tracking-tight text-[#192231] flex items-center justify-center gap-2">
