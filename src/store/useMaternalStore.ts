@@ -59,6 +59,7 @@ import {
 import {
   calculateGestationalWeekFromDueDate,
   calculateGestationalAgeFromDueDate,
+  formatGestationalAge,
   GestationalAge
 } from '../utils/pregnancyStage';
 
