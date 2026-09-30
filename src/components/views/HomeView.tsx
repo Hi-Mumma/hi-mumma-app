@@ -11,8 +11,12 @@ import { MotherHeroBanner } from '../home/MotherHeroBanner';
 import { InteractiveBabyReminder } from '../home/InteractiveBabyReminder';
 import { Sparkles, BookOpen, FolderHeart, HeartHandshake, Compass } from 'lucide-react';
 
+import { calculateGestationalAgeFromDueDate, GestationalAge } from '../../utils/pregnancyStage';
+
 interface HomeViewProps {
   currentWeek: number;
+  currentDays?: number;
+  gestationalAge?: GestationalAge;
   weekInfo: FetalDevelopmentWeek;
   supplements: DailySupplements;
   onToggleSupplement: (key: keyof DailySupplements) => void;
@@ -25,6 +29,8 @@ interface HomeViewProps {
 
 export const HomeView: React.FC<HomeViewProps> = ({
   currentWeek,
+  currentDays = 0,
+  gestationalAge,
   weekInfo,
   supplements,
   onToggleSupplement,
@@ -37,11 +43,19 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const latestBP = bpEntries[0];
   const allDays: WeekdayShort[] = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
+  const pog = gestationalAge || calculateGestationalAgeFromDueDate(
+    currentUser?.dueDate || currentUser?.patientProfile?.dueDate,
+    currentWeek,
+    currentDays
+  );
+
   return (
     <div className="space-y-4 pb-20">
       {/* ── 1. CINEMATIC MOTHER HERO BANNER ── */}
       <MotherHeroBanner
         currentWeek={currentWeek}
+        currentDays={currentDays}
+        gestationalAge={pog}
         weekInfo={weekInfo}
         currentUser={currentUser}
         onExploreJourney={() => onNavigate('journey')}
@@ -56,7 +70,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
             </span>
             <div>
               <h3 className="text-xs font-black text-[#192231]">
-                Week {currentWeek} Insights
+                {pog.formattedLong} Insights
               </h3>
               <p className="text-[10px] text-[#7A8B9E]">
                 Milestones & gentle body guidance

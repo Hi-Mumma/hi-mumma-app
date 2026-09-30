@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { getTrimesterNumber } from '../../utils/pregnancyStage';
+import { getTrimesterNumber, formatGestationalAge, GestationalAge } from '../../utils/pregnancyStage';
 
 interface TrimesterRoadmapProps {
   currentWeek: number;
+  currentDays?: number;
+  gestationalAge?: GestationalAge;
   onSelectWeek: (week: number) => void;
 }
 
@@ -26,8 +28,19 @@ interface RoadmapStage {
 
 export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
   currentWeek,
+  currentDays = 0,
+  gestationalAge,
   onSelectWeek
 }) => {
+  const pog = gestationalAge || {
+    weeks: currentWeek,
+    days: currentDays,
+    totalDays: currentWeek * 7 + currentDays,
+    hasValidDate: true,
+    formattedLong: formatGestationalAge(currentWeek, currentDays, 'long'),
+    formattedShort: formatGestationalAge(currentWeek, currentDays, 'short')
+  };
+
   const [expandedStage, setExpandedStage] = useState<string>(() => {
     const trimester = getTrimesterNumber(currentWeek);
     if (trimester === 1) return 't1';
@@ -137,7 +150,7 @@ export const TrimesterRoadmap: React.FC<TrimesterRoadmapProps> = ({
           </p>
         </div>
         <span className="text-[10px] font-black px-2.5 py-1 rounded-full bg-white border border-[#E2ECF7] text-[#192231] shadow-xs">
-          Week {currentWeek} Active
+          {pog.formattedLong} Active
         </span>
       </div>
 

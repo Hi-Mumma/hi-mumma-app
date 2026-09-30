@@ -2,19 +2,32 @@ import React, { useState } from 'react';
 import { trimesterVisualConfigs } from '../../mock/maternalData';
 import { CinematicCanvasParticles } from './CinematicCanvasParticles';
 import { StageVideoContainer } from './StageVideoContainer';
-import { getTrimesterNumber } from '../../utils/pregnancyStage';
+import { getTrimesterNumber, formatGestationalAge, GestationalAge } from '../../utils/pregnancyStage';
 
 interface PregnancyVisualEvolutionProps {
   currentWeek: number;
+  currentDays?: number;
+  gestationalAge?: GestationalAge;
   onSelectWeek?: (week: number) => void;
 }
 
 export const PregnancyVisualEvolution: React.FC<PregnancyVisualEvolutionProps> = ({
   currentWeek,
+  currentDays = 0,
+  gestationalAge,
   onSelectWeek
 }) => {
   const trimesterNum = getTrimesterNumber(currentWeek);
   const activeExperience = trimesterVisualConfigs[trimesterNum];
+
+  const pog = gestationalAge || {
+    weeks: currentWeek,
+    days: currentDays,
+    totalDays: currentWeek * 7 + currentDays,
+    hasValidDate: true,
+    formattedLong: formatGestationalAge(currentWeek, currentDays, 'long'),
+    formattedShort: formatGestationalAge(currentWeek, currentDays, 'short')
+  };
 
   const [selectedSubWeek, setSelectedSubWeek] = useState<number>(currentWeek);
 
@@ -38,7 +51,7 @@ export const PregnancyVisualEvolution: React.FC<PregnancyVisualEvolutionProps> =
         <div>
           <div className="flex items-center gap-2">
             <span className="text-sm sm:text-base font-black tracking-tight text-[#192231]">
-              3D Fetal Visualizer • Week {currentWeek}
+              3D Fetal Visualizer • {pog.formattedLong}
             </span>
             <span className="w-1.5 h-1.5 rounded-full bg-[#8F9EB3]" />
             <span className="text-xs font-bold text-[#6FAFED]">
@@ -46,7 +59,7 @@ export const PregnancyVisualEvolution: React.FC<PregnancyVisualEvolutionProps> =
             </span>
           </div>
           <p className="text-[10px] font-semibold text-[#8F9EB3]">
-            Week {currentWeek} of 40 Developmental Visualization
+            {pog.formattedLong} of 40 weeks Developmental Visualization
           </p>
         </div>
 

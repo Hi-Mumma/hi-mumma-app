@@ -1,3 +1,4 @@
+import { calculateGestationalAgeFromDueDate } from '../utils/pregnancyStage';
 import { supabase } from './supabaseClient';
 import {
   UserProfile,
@@ -529,10 +530,8 @@ export async function fetchGuardianLinkedPatientData(
 
   let currentWeek = 24;
   if (dueDate) {
-    const due = new Date(dueDate).getTime();
-    const now = new Date().getTime();
-    const weeksRemaining = Math.floor((due - now) / (1000 * 60 * 60 * 24 * 7));
-    currentWeek = Math.max(1, Math.min(40, 40 - weeksRemaining));
+    const pAge = calculateGestationalAgeFromDueDate(dueDate);
+    currentWeek = pAge.weeks;
   }
 
   let supplementsTaken: { taken: number; total: number } | undefined = undefined;

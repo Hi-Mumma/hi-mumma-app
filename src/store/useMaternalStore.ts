@@ -56,11 +56,16 @@ import {
   createCaregiverLinkByEmail,
   fetchGuardianLinkedPatientData
 } from '../lib/supabaseServices';
-import { calculateGestationalWeekFromDueDate } from '../utils/pregnancyStage';
+import {
+  calculateGestationalWeekFromDueDate,
+  calculateGestationalAgeFromDueDate,
+  GestationalAge
+} from '../utils/pregnancyStage';
 
 export const useMaternalStore = () => {
   const [currentTab, setCurrentTab] = useState<NavigationTab>('home');
   const [currentWeek, setCurrentWeek] = useState<number>(24);
+  const [currentDays, setCurrentDays] = useState<number>(0);
   const [phase, setPhase] = useState<PregnancyPhase>('pregnancy');
   const [postpartumDay, setPostpartumDay] = useState<number>(8);
 
@@ -68,12 +73,13 @@ export const useMaternalStore = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
 
-  // Derive gestational week dynamically when user profile / due date changes
+  // Derive gestational week and days dynamically when user profile / due date changes
   useEffect(() => {
     const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
     if (dueDateStr) {
-      const derivedWeek = calculateGestationalWeekFromDueDate(dueDateStr);
-      setCurrentWeek(derivedWeek);
+      const derivedAge = calculateGestationalAgeFromDueDate(dueDateStr);
+      setCurrentWeek(derivedAge.weeks);
+      setCurrentDays(derivedAge.days);
     }
   }, [currentUser]);
 
@@ -94,8 +100,9 @@ export const useMaternalStore = () => {
           if (profile) {
             const dueDateStr = profile.dueDate || profile.patientProfile?.dueDate;
             if (dueDateStr) {
-              const derivedWeek = calculateGestationalWeekFromDueDate(dueDateStr);
-              setCurrentWeek(derivedWeek);
+              const derivedAge = calculateGestationalAgeFromDueDate(dueDateStr);
+              setCurrentWeek(derivedAge.weeks);
+              setCurrentDays(derivedAge.days);
             }
             setCurrentUser(profile);
           } else {
@@ -129,8 +136,9 @@ export const useMaternalStore = () => {
         if (profile) {
           const dueDateStr = profile.dueDate || profile.patientProfile?.dueDate;
           if (dueDateStr) {
-            const derivedWeek = calculateGestationalWeekFromDueDate(dueDateStr);
-            setCurrentWeek(derivedWeek);
+            const derivedAge = calculateGestationalAgeFromDueDate(dueDateStr);
+            setCurrentWeek(derivedAge.weeks);
+            setCurrentDays(derivedAge.days);
           }
           setCurrentUser(profile);
         } else {
@@ -665,6 +673,34 @@ export const useMaternalStore = () => {
     });
   };
 
+  // Handle manual week selection (e.g. from top header dropdown)
+  const handleSetCurrentWeek = (w: number) => {
+    setCurrentWeek(w);
+    const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
+    if (dueDateStr) {
+      const derived = calculateGestationalAgeFromDueDate(dueDateStr);
+      if (derived.weeks === w) {
+        setCurrentDays(derived.days);
+        return;
+      }
+    }
+    setCurrentDays(0);
+  };
+
+  // Derive current Gestational Age object cleanly without inconsistency
+  const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
+  const eddAge = calculateGestationalAgeFromDueDate(dueDateStr, currentWeek, currentDays);
+  const gestationalAge: GestationalAge = eddAge.hasValidDate && eddAge.weeks === currentWeek
+    ? eddAge
+    : {
+        weeks: currentWeek,
+        days: currentDays,
+        totalDays: currentWeek * 7 + currentDays,
+        hasValidDate: eddAge.hasValidDate,
+        formattedLong: formatGestationalAge(currentWeek, currentDays, 'long'),
+        formattedShort: formatGestationalAge(currentWeek, currentDays, 'short')
+      };
+
   // Week info helper
   const weekInfo = mockWeekData[currentWeek] || mockWeekData[24];
 
@@ -676,7 +712,9 @@ export const useMaternalStore = () => {
     currentTab,
     setCurrentTab,
     currentWeek,
-    setCurrentWeek,
+    currentDays,
+    setCurrentWeek: handleSetCurrentWeek,
+    gestationalAge,
     phase,
     setPhase: handleSetPhase,
     postpartumDay,

@@ -1,10 +1,16 @@
 import React from 'react';
 import { Trimester, UserProfile } from '../../types';
 import { BrandLogo } from '../common/BrandLogo';
-import { getTrimesterNumber } from '../../utils/pregnancyStage';
+import {
+  getTrimesterNumber,
+  calculateGestationalAgeFromDueDate,
+  GestationalAge
+} from '../../utils/pregnancyStage';
 
 interface TopHeaderProps {
   week: number;
+  currentDays?: number;
+  gestationalAge?: GestationalAge;
   trimester: Trimester;
   onWeekChange: (week: number) => void;
   currentUser?: UserProfile | null;
@@ -14,6 +20,8 @@ interface TopHeaderProps {
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
   week,
+  currentDays = 0,
+  gestationalAge,
   onWeekChange,
   currentUser,
   onOpenLogin,
@@ -21,6 +29,12 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 }) => {
   const allWeeks = Array.from({ length: 42 }, (_, i) => i + 1);
   const canonicalTrimester = getTrimesterNumber(week);
+
+  const pog = gestationalAge || calculateGestationalAgeFromDueDate(
+    currentUser?.dueDate || currentUser?.patientProfile?.dueDate,
+    week,
+    currentDays
+  );
 
   return (
     <div className="sticky top-0 z-30 bg-[#F8FAFC]/95 backdrop-blur-xl py-2 mb-3 border-b border-[#E8EFF7] flex items-center justify-between">
@@ -70,6 +84,9 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               </option>
             ))}
           </select>
+          <span className="text-[10px] font-black text-[#EA81AA] ml-1.5 border-l border-[#E2ECF7] pl-1.5">
+            {pog.formattedShort}
+          </span>
         </div>
 
         {/* User Account Avatar & Switch / Sign Out Button */}

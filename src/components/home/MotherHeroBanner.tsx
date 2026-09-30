@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { FetalDevelopmentWeek, UserProfile } from '../../types';
-import { getPregnancyStageInfo } from '../../utils/pregnancyStage';
+import {
+  getPregnancyStageInfo,
+  calculateGestationalAgeFromDueDate,
+  GestationalAge
+} from '../../utils/pregnancyStage';
 
 interface MotherHeroBannerProps {
   currentWeek: number;
+  currentDays?: number;
+  gestationalAge?: GestationalAge;
   weekInfo: FetalDevelopmentWeek;
   currentUser?: UserProfile | null;
   onExploreJourney: () => void;
@@ -11,6 +17,8 @@ interface MotherHeroBannerProps {
 
 export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
   currentWeek,
+  currentDays = 0,
+  gestationalAge,
   weekInfo,
   currentUser,
   onExploreJourney
@@ -31,7 +39,13 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
     setTimeout(() => setTapHeart(false), 2400);
   };
 
-  const stageInfo = getPregnancyStageInfo(currentWeek);
+  const pog = gestationalAge || calculateGestationalAgeFromDueDate(
+    currentUser?.dueDate || currentUser?.patientProfile?.dueDate,
+    currentWeek,
+    currentDays
+  );
+
+  const stageInfo = getPregnancyStageInfo(pog.weeks);
 
   const getBadgeStyle = (num: 1 | 2 | 3) => {
     if (num === 1) {
@@ -44,17 +58,19 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
   };
 
   const badgeStyle = getBadgeStyle(stageInfo.trimesterNumber);
-  const progressPercent = Math.min(100, Math.round((currentWeek / 40) * 100));
+  const progressPercent = Math.min(100, Math.round(((pog.weeks * 7 + pog.days) / 280) * 100));
 
   const dueDateStr = currentUser?.dueDate || currentUser?.patientProfile?.dueDate;
   let daysLeft: number;
   if (dueDateStr && dueDateStr.trim()) {
     const due = new Date(dueDateStr.trim());
     const today = new Date();
-    const diffMs = due.getTime() - today.getTime();
-    daysLeft = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    const todayUtc = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+    const dueUtc = Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate());
+    const diffMs = dueUtc - todayUtc;
+    daysLeft = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
   } else {
-    daysLeft = Math.max(0, (40 - currentWeek) * 7);
+    daysLeft = Math.max(0, 280 - (pog.weeks * 7 + pog.days));
   }
 
   const displayName = currentUser?.name ? currentUser.name.split(' ')[0] : 'Mumma';
@@ -69,7 +85,7 @@ export const MotherHeroBanner: React.FC<MotherHeroBannerProps> = ({
         {/* Gestational Badges */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           <span className="text-[11px] font-black uppercase tracking-wider text-[#EA81AA] bg-white px-3 py-1 rounded-full border border-[#FBCFE8] shadow-2xs">
-            Week {currentWeek} of 40
+            {pog.formattedLong}
           </span>
           <span className={`text-[11px] font-extrabold px-3 py-1 rounded-full border shadow-2xs ${badgeStyle.badgeBg} ${badgeStyle.badgeBorder} ${badgeStyle.badgeText}`}>
             {stageInfo.trimesterName}

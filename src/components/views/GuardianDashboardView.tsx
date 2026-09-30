@@ -14,10 +14,13 @@ import {
   Lock
 } from 'lucide-react';
 import { UserProfile, GuardianLinkedPatientData } from '../../types';
+import { calculateGestationalAgeFromDueDate, GestationalAge } from '../../utils/pregnancyStage';
 
 interface GuardianDashboardViewProps {
   currentUser: UserProfile;
   currentWeek: number;
+  currentDays?: number;
+  gestationalAge?: GestationalAge;
   guardianLinkedData?: GuardianLinkedPatientData | null;
   onSwitchToPatientView: () => void;
   onLogout: () => void;
@@ -27,6 +30,8 @@ interface GuardianDashboardViewProps {
 export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
   currentUser,
   currentWeek,
+  currentDays = 0,
+  gestationalAge,
   guardianLinkedData,
   onSwitchToPatientView,
   onLogout,
@@ -40,8 +45,13 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
     'Mother';
   const guardianName = currentUser.name || 'Caregiver';
   const relationship = currentUser.guardianProfile?.relationship || 'Support Person';
-  const weekNumber = guardianLinkedData?.currentWeek || currentWeek;
   const permissions = guardianLinkedData?.permissions;
+
+  const pog = gestationalAge || calculateGestationalAgeFromDueDate(
+    guardianLinkedData?.dueDate || currentUser.patientProfile?.dueDate || currentUser.dueDate,
+    guardianLinkedData?.currentWeek || currentWeek,
+    currentDays
+  );
 
   const sendNudge = (message: string) => {
     setNudgeSentToast(`"${message}" sent to ${patientName}! 💗`);
@@ -72,7 +82,7 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
               Hello, {guardianName} 💙
             </h2>
             <p className="text-xs text-[#5A677D]">
-              Connected to <strong className="text-[#192231]">{patientName}</strong> • Week {weekNumber} of pregnancy
+              Connected to <strong className="text-[#192231]">{patientName}</strong> • {pog.formattedLong} of pregnancy
             </p>
           </div>
 
@@ -105,7 +115,7 @@ export const GuardianDashboardView: React.FC<GuardianDashboardViewProps> = ({
               <span className="text-[10px] font-bold text-[#7A8B9E] uppercase tracking-wider">
                 Gestational Status
               </span>
-              <p className="text-sm font-black text-[#192231]">Week {weekNumber}</p>
+              <p className="text-sm font-black text-[#192231]">{pog.formattedLong}</p>
               <p className="text-[10px] text-[#5A677D]">
                 {permissions.allowJourneyView
                   ? 'Trimester milestone tracking active'

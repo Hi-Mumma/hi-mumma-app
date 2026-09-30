@@ -24,7 +24,9 @@ export default function App() {
     currentTab,
     setCurrentTab,
     currentWeek,
+    currentDays,
     setCurrentWeek,
+    gestationalAge,
     phase,
     setPhase,
     postpartumDay,
@@ -69,8 +71,6 @@ export default function App() {
     isAuthLoading
   } = useMaternalStore();
 
-
-
   // ── 0. AUTH SESSION RESTORATION LOADING ──
   if (isAuthLoading) {
     return (
@@ -106,6 +106,8 @@ export default function App() {
         <GuardianDashboardView
           currentUser={currentUser}
           currentWeek={currentWeek}
+          currentDays={currentDays}
+          gestationalAge={gestationalAge}
           guardianLinkedData={guardianLinkedData}
           onSwitchToPatientView={() => {
             // Allows guardian to preview patient application
@@ -127,6 +129,8 @@ export default function App() {
       {/* ── TOP HEADER (Gestational Week & Trimester) ── */}
       <TopHeader
         week={currentWeek}
+        currentDays={currentDays}
+        gestationalAge={gestationalAge}
         trimester={getTrimesterNumber(currentWeek)}
         onWeekChange={(w) => setCurrentWeek(w)}
         currentUser={currentUser}
@@ -149,6 +153,8 @@ export default function App() {
       {currentTab === 'home' && (
         <HomeView
           currentWeek={currentWeek}
+          currentDays={currentDays}
+          gestationalAge={gestationalAge}
           weekInfo={weekInfo}
           supplements={supplements}
           onToggleSupplement={toggleSupplement}
@@ -163,8 +169,11 @@ export default function App() {
       {currentTab === 'journey' && (
         <JourneyView
           currentWeek={currentWeek}
+          currentDays={currentDays}
+          gestationalAge={gestationalAge}
           weekInfo={weekInfo}
           onSelectWeek={(w) => setCurrentWeek(w)}
+          currentUser={currentUser}
         />
       )}
 
